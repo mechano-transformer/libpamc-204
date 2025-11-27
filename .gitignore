@@ -1,0 +1,42 @@
+# ビルド成果物
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# バイナリ
+*.dll
+*.so
+*.dylib
+*.exe
+*.out
+*.lib
+*.exp
+*.pdb
+*.ilk
+
+# オブジェクトファイル
+*.o
+*.obj
+
+# プリコンパイルヘッダ
+*.pch
+*.gch
+
+# ログ/一時ファイル
+*.log
+*.tmp
+*.bak
+
+# VSCode 設定（ユーザー固有）
+.vscode/
+
+# Visual Studio (Windows側で開いた場合)
+.vs/
+*.user
+*.suo
+
+# Python テストスクリプトのキャッシュ
+__pycache__/
+*.pyc
