@@ -96,6 +96,9 @@ sudo ./test_serial /dev/ttyUSB0 "E01INF"
 .\test_serial.exe COM3 "E01INF"
 ```
 
+### 動的ライブラリの動作確認
+`test_linux.py`,`test_windows.py`を用意したのでこれを実行することによりライブラリの動作確認が行えます。
+
 ## 🧪 テスト記録
 - Windows
 ![windows test](./imgs/windows-test.png)
