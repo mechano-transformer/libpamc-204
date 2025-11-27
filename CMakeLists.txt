@@ -1,15 +1,38 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 project(libpamc204 LANGUAGES CXX)
 
-include_directories(include)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# 公開ヘッダ
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# 共有のソース
+set(COMMON_SRC
+    src/serial_common.cpp
+)
+
+# OS ごとの切替
 if(WIN32)
-    set(SOURCES src/serial_win.cpp src/serial_common.cpp)
+    set(OS_SRC
+        src/serial_win.cpp
+    )
 else()
-    set(SOURCES src/serial_linux.cpp src/serial_common.cpp)
+    set(OS_SRC
+        src/serial_linux.cpp
+    )
 endif()
 
-add_library(pamc204 SHARED ${SOURCES})
+add_library(pamc204 SHARED
+    ${COMMON_SRC}
+    ${OS_SRC}
+)
 
-add_executable(test_serial test/main.cpp)
+# 名前の調整（Windows: pamc204.dll / Linux: libpamc204.so）
+set_target_properties(pamc204 PROPERTIES
+    OUTPUT_NAME "pamc204"
+)
+
+# テスト用実行ファイル
+add_executable(test_serial demo/main.cpp)
 target_link_libraries(test_serial pamc204)
