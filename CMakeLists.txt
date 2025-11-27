@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+﻿cmake_minimum_required(VERSION 3.15)
 project(libpamc204 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -17,6 +17,7 @@ if(WIN32)
     set(OS_SRC
         src/serial_win.cpp
     )
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
     set(OS_SRC
         src/serial_linux.cpp

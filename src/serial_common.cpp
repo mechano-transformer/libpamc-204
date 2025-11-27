@@ -1,4 +1,4 @@
-#include "serial_common.h"
+﻿#include "serial_common.h"
 #include <algorithm>
 #include <cctype>
 #include <vector>

@@ -1,11 +1,10 @@
-#include "serial.h"
+﻿#include "serial.h"
 #include <windows.h>
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
-#include "serial.h"
 #include "serial_common.h"
 
 // DLL エントリポイント (Windows専用)

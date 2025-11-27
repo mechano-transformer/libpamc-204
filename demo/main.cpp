@@ -1,4 +1,4 @@
-#include "serial.h"
+﻿#include "serial.h"
 #include <iostream>
 
 int main(int argc, char** argv) {
@@ -6,10 +6,11 @@ int main(int argc, char** argv) {
     std::string cmd = "AT";
 
     if (argc >= 2) port = argv[1];
-#ifdef _WIN32
-    if (port.empty()) port = "COM3"; // 例
+
+#if defined(_WIN32)
+    if (port.empty()) port = "COM3"; // Windows のデフォルト
 #else
-    if (port.empty()) port = "/dev/ttyUSB0"; // 例
+    if (port.empty()) port = "/dev/ttyUSB0"; // Linux のデフォルト
 #endif
     if (argc >= 3) cmd = argv[2];
 

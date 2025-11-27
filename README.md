@@ -1,4 +1,4 @@
-# libpamc-204
+﻿# libpamc-204
 
 クロスプラットフォーム対応のシリアル通信ライブラリです。  
 Windows では DLL、Linux/WSL2 では SO としてビルドできます。  
@@ -52,8 +52,16 @@ cmake --build .
 ```
 
 生成物:
-- `./build/pamc204.dll` (DLL)
-- `./build/test_serial.exe` (テスト用実行ファイル)
+- Debugビルド時
+  - build\Debug\pamc204.dll   # DLL本体
+  - build\Debug\pamc204.lib   # インポートライブラリ
+  - build\Debug\pamc204.exp   # エクスポート情報
+  - build\Debug\test_serial.exe # 動作確認用実行ファイル
+
+- Releaseビルド時
+  - build\Release\pamc204.dll
+  - build\Release\pamc204.lib
+  - build\Release\test_serial.exe
 
 ## ▶️ 使い方
 
@@ -61,8 +69,8 @@ cmake --build .
 ```cpp
 #include "serial.h"
 
-bool ok = pamc204::send_command("COM3", "AT");       // Windows
-bool ok = pamc204::send_command("/dev/ttyUSB0", "AT"); // Linux
+bool ok = pamc204::send_command("COM3", "E01INF");       // Windows
+bool ok = pamc204::send_command("/dev/ttyUSB0", "E01INF"); // Linux
 ```
 
 - `portName`: OSごとのポート指定  
@@ -80,12 +88,12 @@ bool ok = pamc204::send_command("/dev/ttyUSB0", "AT"); // Linux
 
 ### Linux / WSL2
 ```bash
-./test_serial /dev/ttyUSB0 "AT"
+./test_serial /dev/ttyUSB0 "E01INF"
 ```
 
 ### Windows
 ```powershell
-.\test_serial.exe COM3 "AT"
+.\test_serial.exe COM3 "E01INF"
 ```
 
 ---
@@ -94,3 +102,7 @@ bool ok = pamc204::send_command("/dev/ttyUSB0", "AT"); // Linux
 - Windows では DLL 内部で `DllMain` を持ち、Win32 API を利用しています。  
 - Linux では `termios` を利用して同等の動作を再現しています。  
 - エラートークン検出は共通処理 (`serial_common.cpp`) にまとめています。  
+
+## 🧪 テスト記録
+- Windows
+![windows test](windows-test.png)

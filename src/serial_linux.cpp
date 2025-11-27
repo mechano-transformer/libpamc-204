@@ -1,4 +1,4 @@
-#include "serial.h"
+﻿#include "serial.h"
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
