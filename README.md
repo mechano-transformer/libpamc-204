@@ -1,6 +1,6 @@
 ﻿# libpamc-204
 
-クロスプラットフォーム対応のシリアル通信ライブラリです。  
+クロスプラットフォーム対応のPAMC204制御用ライブラリです。  
 Windows では DLL、Linux/WSL2 では SO としてビルドできます。  
 共通 API `pamc204::send_command(portName, command)` を提供し、OS ごとに内部実装を切り替えています。
 
@@ -96,16 +96,9 @@ sudo ./test_serial /dev/ttyUSB0 "E01INF"
 .\test_serial.exe COM3 "E01INF"
 ```
 
----
-
-## 📌 補足
-- Windows では DLL 内部で `DllMain` を持ち、Win32 API を利用しています。  
-- Linux では `termios` を利用して同等の動作を再現しています。  
-- エラートークン検出は共通処理 (`serial_common.cpp`) にまとめています。  
-
 ## 🧪 テスト記録
 - Windows
-![windows test](windows-test.png)
+![windows test](./imgs/windows-test.png)
 
 ## memo
 ### WSL2からホストWindows11のUSB機器を使用する方法
