@@ -88,7 +88,7 @@ bool ok = pamc204::send_command("/dev/ttyUSB0", "E01INF"); // Linux
 
 ### Linux / WSL2
 ```bash
-./test_serial /dev/ttyUSB0 "E01INF"
+sudo ./test_serial /dev/ttyUSB0 "E01INF"
 ```
 
 ### Windows
@@ -106,3 +106,24 @@ bool ok = pamc204::send_command("/dev/ttyUSB0", "E01INF"); // Linux
 ## 🧪 テスト記録
 - Windows
 ![windows test](windows-test.png)
+
+## memo
+### WSL2からホストWindows11のUSB機器を使用する方法
+[参考](https://watako-lab.com/2025/05/18/wsl2_usbserial/)
+
+1. CMDを管理者権限で起動
+```powershell
+# 【usbipdのインストール】
+winget install usbipd
+
+#【接続されているUSBデバイスを表示】
+usbipd list
+  7-2    xxxx:xxxx  USB-Enhanced-SERIAL CH343 (COM2)                              Not shared
+　⇒ USBシリアルが7-2というIDであることがわかる。
+
+#【WSL側で使いたいデバイスをバインド】
+usbipd bind --busid 1-1
+
+#【WSL側で使いたいデバイスをバインド】
+usbipd attach --busid 1-1 --wsl
+```

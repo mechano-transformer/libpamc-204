@@ -10,6 +10,8 @@
 #include <cstdio>
 #include "serial.h"
 #include "serial_common.h"
+#include <cerrno>
+#include <cstring>
 
 // --- 共有のヘルパー（serial_common.cpp にある実装の宣言） ---
 std::string to_upper_ascii(const std::string& s);
@@ -99,39 +101,48 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
     return response;
 }
 
+
+// 共通API（Linux版）
 namespace pamc204 {
-    // 共通API（Linux版）
     bool send_command(const std::string& portName, const std::string& command)
     {
-        // Linux のポート名はそのまま（例: "/dev/ttyUSB0"）
+        // ポートを開く
         int fd = ::open(portName.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
         if (fd < 0) {
+            std::fprintf(stderr, "open failed on %s: %s\n",
+                        portName.c_str(), strerror(errno));
             return false;
         }
 
+        // 設定
         bool ok = configure_port_linux(fd);
         if (!ok) {
+            std::fprintf(stderr, "configure_port failed: %s\n", strerror(errno));
             ::close(fd);
             return false;
         }
 
+        // 書き込み
         std::string msg = command;
         msg.append("\r\n");
         ssize_t written = ::write(fd, msg.data(), msg.size());
         if (written != (ssize_t)msg.size()) {
+            std::fprintf(stderr, "write failed: %s\n", strerror(errno));
             ::close(fd);
             return false;
         }
 
+        // 読み取り
         std::string resp = read_response_from_port_linux(fd);
+        if (resp.empty()) {
+            std::fprintf(stderr, "read timeout or empty response\n");
+        }
         ::close(fd);
 
         if (!resp.empty()) {
             std::string token = find_error_token(resp);
             if (!token.empty()) {
-                std::string errLine = "ERROR DETECTED: ";
-                errLine += token;
-                errLine += "\n";
+                std::string errLine = "ERROR DETECTED: " + token + "\n";
                 std::fwrite(errLine.data(), 1, errLine.size(), stdout);
                 std::fflush(stdout);
                 return false;
@@ -140,4 +151,14 @@ namespace pamc204 {
         }
         return true;
     }
+}
+
+// C API エクスポート用ラッパー
+extern "C" bool send_command(const char* portName, const char* command)
+{
+    if (!portName || !command) {
+        std::fprintf(stderr, "send_command: invalid arguments\n");
+        return false;
+    }
+    return pamc204::send_command(std::string(portName), std::string(command));
 }
