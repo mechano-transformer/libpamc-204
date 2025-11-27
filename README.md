@@ -118,8 +118,8 @@ winget install usbipd
 
 #【接続されているUSBデバイスを表示】
 usbipd list
-  7-2    xxxx:xxxx  USB-Enhanced-SERIAL CH343 (COM2)                              Not shared
-　⇒ USBシリアルが7-2というIDであることがわかる。
+  1-1    0403:6015  USB Serial Converter                                          Attached
+　⇒ USBシリアルが1-1というIDであることがわかる。
 
 #【WSL側で使いたいデバイスをバインド】
 usbipd bind --busid 1-1
