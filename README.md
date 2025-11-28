@@ -17,17 +17,26 @@ Windows では DLL、Linux/WSL2 では SO としてビルドできます。
 
 ```
 libpamc-204/
-├── CMakeLists.txt          # ビルド設定（Windows/Linux両対応）
-├── README.md               
-├── .gitignore              
-├── include/                # 公開ヘッダ
-│   └── serial.h            # 共通インターフェース
-├── src/                    
-│   ├── serial_common.cpp   # 共通処理（文字列変換・エラートークン検出）
-│   ├── serial_win.cpp      # Windows専用実装（Win32 API）
-│   ├── serial_linux.cpp    # Linux専用実装（termios）
-└── demo/                   # 簡易動作確認用コード
-    └── main.cpp            
+├── CMakeLists.txt              # ビルド設定（Windows/Linux両対応）
+├── README.md
+├── .gitignore
+├── include/                    # 公開ヘッダ
+│   ├── serial.h                # メインAPI
+│   └── serial_common.h         # 共通ユーティリティ
+├── src/
+│   ├── core/                   # プラットフォーム非依存コード
+│   │   ├── api.cpp             # 高レベルAPI実装
+│   │   └── utils.cpp           # 共通ユーティリティ
+│   └── platform/               # プラットフォーム固有実装
+│       ├── windows/
+│       │   └── serial.cpp      # Windows実装（Win32 API）
+│       └── linux/
+│           └── serial.cpp      # Linux実装（termios）
+├── demo/                       # サンプルコード
+│   └── main.cpp
+└── docs/                       # ドキュメント
+    ├── API_COMPARISON.md       # CmdLibとの対応表
+    └── *.pdf                   # 製品仕様書
 ```
 
 ## 🔧 ビルド方法
@@ -71,13 +80,39 @@ cmake --build .
 
 ## ▶️ 使い方
 
-### 共通 API
+### 🎯 高レベルAPI（推奨）
+
+個別コマンド専用関数を使用する方法（PDFのCmdLibスタイル）：
 
 ```cpp
 #include "serial.h"
 
-bool ok = pamc204::send_command("COM3", "E01INF");       // Windows
-bool ok = pamc204::send_command("/dev/ttyUSB0", "E01INF"); // Linux
+// C++ API
+pamc204::get_firmware_version("COM3", 1);           // E01INF
+pamc204::check_device("COM3", 1);                   // E01
+pamc204::set_voltage("COM3", 1, 4095);              // E01DAC4095 (150V)
+pamc204::rotate_positive("COM3", 1, 1500, 1000, 'A'); // E01NR15001000A
+pamc204::stop("COM3", 1);                           // E01S
+
+// C API
+pamc204_get_firmware_version("COM3", 1);
+pamc204_rotate_positive("COM3", 1, 1500, 1000, 'A');
+pamc204_stop("COM3", 1);
+```
+
+### 🔧 低レベルAPI
+
+汎用コマンド送信（柔軟性が高い）：
+
+```cpp
+#include "serial.h"
+
+// C++ API
+pamc204::send_command("COM3", "E01INF");
+pamc204::send_command("COM3", "E01NR15001000A");
+
+// C API
+send_command("COM3", "E01INF");
 ```
 
 - `portName`: OSごとのポート指定

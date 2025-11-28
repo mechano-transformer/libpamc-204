@@ -7,29 +7,31 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 公開ヘッダ
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# 共有のソース
-set(COMMON_SRC
-    src/serial_common.cpp
+# コアソース（プラットフォーム非依存）
+set(CORE_SRC
+    src/core/utils.cpp
+    src/core/api.cpp
 )
 
-# OS ごとの切替
+# プラットフォーム固有のソース
 if(WIN32)
-    set(OS_SRC
-        src/serial_win.cpp
+    set(PLATFORM_SRC
+        src/platform/windows/serial.cpp
     )
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
-    set(OS_SRC
-        src/serial_linux.cpp
+    set(PLATFORM_SRC
+        src/platform/linux/serial.cpp
     )
 endif()
 
+# 共有ライブラリのビルド
 add_library(pamc204 SHARED
-    ${COMMON_SRC}
-    ${OS_SRC}
+    ${CORE_SRC}
+    ${PLATFORM_SRC}
 )
 
-# 名前の調整（Windows: pamc204.dll / Linux: libpamc204.so）
+# ライブラリ名の設定（Windows: pamc204.dll / Linux: libpamc204.so）
 set_target_properties(pamc204 PROPERTIES
     OUTPUT_NAME "pamc204"
 )
