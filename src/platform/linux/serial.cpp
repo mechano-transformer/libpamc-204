@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <array>
 #include <sstream>
-#include <algorithm>
+
 // --- 共有のヘルパー（serial_common.h にある実装の宣言） ---
 std::string to_upper_ascii(const std::string &s);
 std::string find_error_token(const std::string &resp);
@@ -119,6 +119,7 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
 }
 
 // --- USBポート自動検出 ---
+
 static std::string detect_pamc204_port_linux(const std::string &vid = "0403", const std::string &pid = "6015")
 {
     namespace fs = std::filesystem;
@@ -128,12 +129,6 @@ static std::string detect_pamc204_port_linux(const std::string &vid = "0403", co
             entry.path().string().find("ttyACM") != std::string::npos)
         {
             std::string devPath = entry.path().string();
-
-            // 念のため改行やスペースを除去
-            devPath.erase(std::remove(devPath.begin(), devPath.end(), '\n'), devPath.end());
-            devPath.erase(std::remove(devPath.begin(), devPath.end(), '\r'), devPath.end());
-            devPath.erase(std::remove(devPath.begin(), devPath.end(), ' '), devPath.end());
-
             std::string cmd = "udevadm info --query=property --name=" + devPath;
             std::array<char, 512> buffer{};
             std::string result;
@@ -148,15 +143,12 @@ static std::string detect_pamc204_port_linux(const std::string &vid = "0403", co
             if (result.find("ID_VENDOR_ID=" + vid) != std::string::npos &&
                 result.find("ID_MODEL_ID=" + pid) != std::string::npos)
             {
-                // udevadm実行後にデバイス安定化のため少し待機
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 return devPath; // 見つかったポートを返す
             }
         }
     }
     return "";
 }
-
 
 
 // 共通API（Linux版）
