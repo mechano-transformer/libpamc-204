@@ -4,7 +4,7 @@
 int main(int argc, char **argv)
 {
     std::string port;
-    std::string cmd = "AT";
+    std::string cmd = "E01INF";
 
     if (argc >= 2)
         port = argv[1];
