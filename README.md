@@ -87,14 +87,14 @@ cmake --build .
 ```cpp
 #include "serial.h"
 
-// C++ API
+// C++ API（名前空間で保護）
 pamc204::get_firmware_version("COM3", 1);           // E01INF
 pamc204::check_device("COM3", 1);                   // E01
 pamc204::set_voltage("COM3", 1, 4095);              // E01DAC4095 (150V)
 pamc204::rotate_positive("COM3", 1, 1500, 1000, 'A'); // E01NR15001000A
 pamc204::stop("COM3", 1);                           // E01S
 
-// C API
+// C API（pamc204_プレフィックスで保護）
 pamc204_get_firmware_version("COM3", 1);
 pamc204_rotate_positive("COM3", 1, 1500, 1000, 'A');
 pamc204_stop("COM3", 1);
@@ -112,7 +112,7 @@ pamc204::send_command("COM3", "E01INF");
 pamc204::send_command("COM3", "E01NR15001000A");
 
 // C API
-send_command("COM3", "E01INF");
+pamc204_send_command("COM3", "E01INF");
 ```
 
 - `portName`: OSごとのポート指定
@@ -167,17 +167,26 @@ PAMC-204のコマンド仕様に基づく使用例：
   - 4桁: `yyyy` = 0000～9999（0000=連続駆動）
   - 6桁: `Xyyyyyy` = X000001～X999999（Xプレフィックス付き）
 - **チャンネル**: `z` = A（CH1）, B（CH2）, C（CH3）, D（CH4）
-- **出力電圧**: 70V～150V（DACコマンドで調整）
+- **出力電圧**: 70V～150V
 
 #### エラーメッセージ
 
+- ライブラリによるエラーメッセージ表示例
+
+```
+ERROR: ERROR1 - コマンドが認識できません
+ERROR: ERROR4 - 6桁パルス数が範囲外です（X000001～X999999）
+ERROR: BUSY - ドライバが駆動中です。停止後に再送信してください
+```
+
+- エラー仕様
 | エラー | 説明 |
 |--------|------|
-| `Error Value Range` | 出力電圧の値が範囲外 |
+| `Error Value Range` | 出力電圧の値が範囲外（70V～150V） |
 | `ERROR` | 回転方向、周波数、チャンネル指定が不正、またはコマンド認識不可 |
 | `ERROR1` | コマンド認識不可 |
-| `ERROR4` | 6桁パルス数が範囲外 |
-| `ERROR5` | 4桁パルス数が範囲外 |
+| `ERROR4` | 6桁パルス数が範囲外（X000001～X999999） |
+| `ERROR5` | 4桁パルス数が範囲外（0001～9999） |
 | `BUSY` | ドライバ駆動中（停止後に再送信） |
 
 ## 🧪 テスト実行方法

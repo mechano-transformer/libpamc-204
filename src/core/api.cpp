@@ -81,6 +81,13 @@ namespace pamc204
 extern "C"
 {
 
+    bool pamc204_send_command(const char *port_name, const char *command)
+    {
+        if (!port_name || !command)
+            return false;
+        return pamc204::send_command(std::string(port_name), std::string(command));
+    }
+
     bool pamc204_get_firmware_version(const char *port_name, int address)
     {
         if (!port_name)

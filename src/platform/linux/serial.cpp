@@ -13,16 +13,19 @@
 #include <cerrno>
 #include <cstring>
 
-// --- 共有のヘルパー（serial_common.cpp にある実装の宣言） ---
-std::string to_upper_ascii(const std::string& s);
-std::string find_error_token(const std::string& resp);
+// --- 共有のヘルパー（serial_common.h にある実装の宣言） ---
+std::string to_upper_ascii(const std::string &s);
+std::string find_error_token(const std::string &resp);
+std::string get_error_description(const std::string &error_token);
 
 // Linux: 出力は stdout に行う
-static void output_response_once_linux(const std::string& resp)
+static void output_response_once_linux(const std::string &resp)
 {
-    if (resp.empty()) return;
+    if (resp.empty())
+        return;
     std::string token = find_error_token(resp);
-    if (!token.empty()) {
+    if (!token.empty())
+    {
         std::string errLine = "ERROR DETECTED: ";
         errLine += token;
         errLine += "\n";
@@ -31,7 +34,8 @@ static void output_response_once_linux(const std::string& resp)
         return;
     }
     std::string outMsg = resp;
-    if (resp.empty() || (resp.back() != '\n' && resp.back() != '\r')) outMsg += "\n";
+    if (resp.empty() || (resp.back() != '\n' && resp.back() != '\r'))
+        outMsg += "\n";
     std::fwrite(outMsg.data(), 1, outMsg.size(), stdout);
     std::fflush(stdout);
 }
@@ -40,20 +44,21 @@ static void output_response_once_linux(const std::string& resp)
 static bool configure_port_linux(int fd)
 {
     struct termios tty;
-    if (tcgetattr(fd, &tty) != 0) return false;
+    if (tcgetattr(fd, &tty) != 0)
+        return false;
 
     cfsetospeed(&tty, B115200);
     cfsetispeed(&tty, B115200);
 
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;        // 8bit
-    tty.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS);       // 8N1, no HW flow
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;  // 8bit
+    tty.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS); // 8N1, no HW flow
     tty.c_cflag |= (CLOCAL | CREAD);
 
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);            // no SW flow
-    tty.c_lflag = 0;                                   // raw
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // no SW flow
+    tty.c_lflag = 0;                        // raw
     tty.c_oflag = 0;
 
-    tty.c_cc[VMIN]  = 0;
+    tty.c_cc[VMIN] = 0;
     tty.c_cc[VTIME] = 1; // 0.1s
 
     return (tcsetattr(fd, TCSANOW, &tty) == 0);
@@ -65,7 +70,8 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
     std::string response;
     std::vector<char> buf(bufSize);
 
-    auto now_ms = []() {
+    auto now_ms = []()
+    {
         return std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()).time_since_epoch().count();
     };
 
@@ -73,15 +79,20 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
     long long lastRead = start;
     bool started = false;
 
-    while ((now_ms() - start) < totalTimeoutMs) {
+    while ((now_ms() - start) < totalTimeoutMs)
+    {
         int bytesAvailable = 0;
-        if (ioctl(fd, FIONREAD, &bytesAvailable) < 0) {
+        if (ioctl(fd, FIONREAD, &bytesAvailable) < 0)
+        {
             break;
         }
 
-        if (bytesAvailable <= 0) {
-            if (started) {
-                if ((now_ms() - lastRead) >= idleTimeoutMs) break;
+        if (bytesAvailable <= 0)
+        {
+            if (started)
+            {
+                if ((now_ms() - lastRead) >= idleTimeoutMs)
+                    break;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
@@ -89,8 +100,10 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
 
         size_t toRead = (bytesAvailable > (int)bufSize) ? bufSize : (size_t)bytesAvailable;
         ssize_t n = ::read(fd, buf.data(), toRead);
-        if (n < 0) break;
-        if (n == 0) {
+        if (n < 0)
+            break;
+        if (n == 0)
+        {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
@@ -101,22 +114,24 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
     return response;
 }
 
-
 // 共通API（Linux版）
-namespace pamc204 {
-    bool send_command(const std::string& portName, const std::string& command)
+namespace pamc204
+{
+    bool send_command(const std::string &portName, const std::string &command)
     {
         // ポートを開く
         int fd = ::open(portName.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
-        if (fd < 0) {
+        if (fd < 0)
+        {
             std::fprintf(stderr, "open failed on %s: %s\n",
-                        portName.c_str(), strerror(errno));
+                         portName.c_str(), strerror(errno));
             return false;
         }
 
         // 設定
         bool ok = configure_port_linux(fd);
-        if (!ok) {
+        if (!ok)
+        {
             std::fprintf(stderr, "configure_port failed: %s\n", strerror(errno));
             ::close(fd);
             return false;
@@ -126,7 +141,8 @@ namespace pamc204 {
         std::string msg = command;
         msg.append("\r\n");
         ssize_t written = ::write(fd, msg.data(), msg.size());
-        if (written != (ssize_t)msg.size()) {
+        if (written != (ssize_t)msg.size())
+        {
             std::fprintf(stderr, "write failed: %s\n", strerror(errno));
             ::close(fd);
             return false;
@@ -134,15 +150,19 @@ namespace pamc204 {
 
         // 読み取り
         std::string resp = read_response_from_port_linux(fd);
-        if (resp.empty()) {
+        if (resp.empty())
+        {
             std::fprintf(stderr, "read timeout or empty response\n");
         }
         ::close(fd);
 
-        if (!resp.empty()) {
+        if (!resp.empty())
+        {
             std::string token = find_error_token(resp);
-            if (!token.empty()) {
-                std::string errLine = "ERROR DETECTED: " + token + "\n";
+            if (!token.empty())
+            {
+                std::string description = get_error_description(token);
+                std::string errLine = "ERROR: " + token + " - " + description + "\n";
                 std::fwrite(errLine.data(), 1, errLine.size(), stdout);
                 std::fflush(stdout);
                 return false;
@@ -154,9 +174,10 @@ namespace pamc204 {
 }
 
 // C API エクスポート用ラッパー
-extern "C" bool send_command(const char* portName, const char* command)
+extern "C" bool send_command(const char *portName, const char *command)
 {
-    if (!portName || !command) {
+    if (!portName || !command)
+    {
         std::fprintf(stderr, "send_command: invalid arguments\n");
         return false;
     }

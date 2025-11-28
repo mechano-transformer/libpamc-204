@@ -82,7 +82,7 @@ extern "C"
 #endif
 
     // 低レベルAPI
-    bool send_command(const char *port_name, const char *command);
+    bool pamc204_send_command(const char *port_name, const char *command);
 
     // 高レベルAPI
     bool pamc204_get_firmware_version(const char *port_name, int address);
