@@ -90,7 +90,21 @@ bool ok = pamc204::send_command("/dev/ttyUSB0", "E01INF"); // Linux
 - `true`: 成功
 - `false`: エラー（Windowsでは `GetLastError()`、Linuxでは標準出力にエラー行）
 
-### コマンド一覧とAPI使用例
+### 📋 (参考)コマンド表
+
+PAMC-204で使用可能なコマンド一覧：
+
+| No | コマンド | 詳細 |
+|----|---------|------|
+| 1 | `ExxINF` | ファームウェアバージョンの確認 |
+| 2 | `Exx` | アドレスを持つドライバーがネットワーク内に存在するかどうかを確認 |
+| 3 | `SETADDRxx` | ドライバのアドレスを変更 |
+| 4 | `ExxDACnnnn` | 駆動電圧の調整 |
+| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | 正回転駆動コマンド |
+| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | 逆回転駆動コマンド |
+| 7 | `ExxS` | 停止コマンド |
+
+### 📋 API使用例
 
 PAMC-204のコマンド仕様に基づく使用例：
 
