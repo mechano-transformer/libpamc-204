@@ -1,11 +1,11 @@
-﻿#include "serial.h"
+﻿#include "pamc204.h"
 #include <windows.h>
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
-#include "serial_common.h"
+#include "pamc204_internal.h"
 
 // DLL エントリポイント (Windows専用)
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)

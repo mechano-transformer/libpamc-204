@@ -1,5 +1,5 @@
-﻿#ifndef SERIAL_H
-#define SERIAL_H
+﻿#ifndef PAMC204_H
+#define PAMC204_H
 
 #include <string>
 
@@ -99,4 +99,4 @@ extern "C"
 }
 #endif
 
-#endif // SERIAL_H
+#endif // PAMC204_H

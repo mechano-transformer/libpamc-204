@@ -1,4 +1,4 @@
-﻿#include "serial.h"
+﻿#include "pamc204.h"
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 #include <cstdio>
-#include "serial.h"
-#include "serial_common.h"
+#include "pamc204.h"
+#include "pamc204_internal.h"
 #include <cerrno>
 #include <cstring>
 

@@ -20,8 +20,8 @@ libpamc-204/
 ├── CMakeLists.txt              # ビルド設定（Windows/Linux両対応）
 ├── README.md
 ├── include/                    # 公開ヘッダ
-│   ├── serial.h                # メインAPI
-│   └── serial_common.h         # 共通ユーティリティ
+│   ├── pamc204.h               # メインAPI
+│   └── pamc204_internal.h      # 内部ユーティリティ
 ├── src/
 │   ├── core/                   # プラットフォーム非依存コード
 │   │   ├── api.cpp             # 高レベルAPI実装
@@ -81,7 +81,7 @@ cmake --build .
 個別コマンド専用関数を使用する方法（PDFのCmdLibスタイル）：
 
 ```cpp
-#include "serial.h"
+#include "pamc204.h"
 
 // C++ API（名前空間で保護）
 pamc204::get_firmware_version("COM3", 1);           // E01INF
@@ -101,7 +101,7 @@ pamc204_stop("COM3", 1);
 汎用コマンド送信（柔軟性が高い）：
 
 ```cpp
-#include "serial.h"
+#include "pamc204.h"
 
 // C++ API
 pamc204::send_command("COM3", "E01INF");

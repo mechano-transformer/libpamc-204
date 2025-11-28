@@ -1,4 +1,4 @@
-﻿#include "serial_common.h"
+﻿#include "pamc204_internal.h"
 #include <algorithm>
 #include <cctype>
 #include <vector>
