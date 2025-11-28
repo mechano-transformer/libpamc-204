@@ -17,17 +17,22 @@ Windows では DLL、Linux/WSL2 では SO としてビルドできます。
 
 ```
 libpamc-204/
-├── CMakeLists.txt          # ビルド設定（Windows/Linux両対応）
-├── README.md               
-├── .gitignore              
-├── include/                # 公開ヘッダ
-│   └── serial.h            # 共通インターフェース
-├── src/                    
-│   ├── serial_common.cpp   # 共通処理（文字列変換・エラートークン検出）
-│   ├── serial_win.cpp      # Windows専用実装（Win32 API）
-│   ├── serial_linux.cpp    # Linux専用実装（termios）
-└── demo/                   # 簡易動作確認用コード
-    └── main.cpp            
+├── CMakeLists.txt              # ビルド設定（Windows/Linux両対応）
+├── README.md
+├── include/                    # 公開ヘッダ
+│   ├── pamc204.h               # メインAPI
+│   └── pamc204_internal.h      # 内部ユーティリティ
+├── src/
+│   ├── core/                   # プラットフォーム非依存コード
+│   │   ├── api.cpp             # 高レベルAPI実装
+│   │   └── utils.cpp           # 共通ユーティリティ
+│   └── platform/               # プラットフォーム固有実装
+│       ├── windows/
+│       │   └── serial.cpp      # Windows実装（Win32 API）
+│       └── linux/
+│           └── serial.cpp      # Linux実装（termios）
+└── demo/                       # サンプルコード
+    └── main.cpp
 ```
 
 ## 🔧 ビルド方法
@@ -71,13 +76,39 @@ cmake --build .
 
 ## ▶️ 使い方
 
-### 共通 API
+### 🎯 高レベルAPI（推奨）
+
+個別コマンド専用関数を使用する方法（PDFのCmdLibスタイル）：
 
 ```cpp
-#include "serial.h"
+#include "pamc204.h"
 
-bool ok = pamc204::send_command("COM3", "E01INF");       // Windows
-bool ok = pamc204::send_command("/dev/ttyUSB0", "E01INF"); // Linux
+// C++ API（名前空間で保護）
+pamc204::get_firmware_version("COM3", 1);           // E01INF
+pamc204::check_device("COM3", 1);                   // E01
+pamc204::set_voltage("COM3", 1, 4095);              // E01DAC4095 (150V)
+pamc204::rotate_positive("COM3", 1, 1500, 1000, 'A'); // E01NR15001000A
+pamc204::stop("COM3", 1);                           // E01S
+
+// C API（pamc204_プレフィックスで保護）
+pamc204_get_firmware_version("COM3", 1);
+pamc204_rotate_positive("COM3", 1, 1500, 1000, 'A');
+pamc204_stop("COM3", 1);
+```
+
+### 🔧 低レベルAPI
+
+汎用コマンド送信（柔軟性が高い）：
+
+```cpp
+#include "pamc204.h"
+
+// C++ API
+pamc204::send_command("COM3", "E01INF");
+pamc204::send_command("COM3", "E01NR15001000A");
+
+// C API
+pamc204_send_command("COM3", "E01INF");
 ```
 
 - `portName`: OSごとのポート指定
@@ -132,17 +163,26 @@ PAMC-204のコマンド仕様に基づく使用例：
   - 4桁: `yyyy` = 0000～9999（0000=連続駆動）
   - 6桁: `Xyyyyyy` = X000001～X999999（Xプレフィックス付き）
 - **チャンネル**: `z` = A（CH1）, B（CH2）, C（CH3）, D（CH4）
-- **出力電圧**: 70V～150V（DACコマンドで調整）
+- **出力電圧**: 70V～150V
 
 #### エラーメッセージ
 
+- ライブラリによるエラーメッセージ表示例
+
+```
+ERROR: ERROR1 - コマンドが認識できません
+ERROR: ERROR4 - 6桁パルス数が範囲外です（X000001～X999999）
+ERROR: BUSY - ドライバが駆動中です。停止後に再送信してください
+```
+
+- エラー仕様
 | エラー | 説明 |
 |--------|------|
-| `Error Value Range` | 出力電圧の値が範囲外 |
+| `Error Value Range` | 出力電圧の値が範囲外（70V～150V） |
 | `ERROR` | 回転方向、周波数、チャンネル指定が不正、またはコマンド認識不可 |
 | `ERROR1` | コマンド認識不可 |
-| `ERROR4` | 6桁パルス数が範囲外 |
-| `ERROR5` | 4桁パルス数が範囲外 |
+| `ERROR4` | 6桁パルス数が範囲外（X000001～X999999） |
+| `ERROR5` | 4桁パルス数が範囲外（0001～9999） |
 | `BUSY` | ドライバ駆動中（停止後に再送信） |
 
 ## 🧪 テスト実行方法
@@ -156,7 +196,12 @@ sudo ./test_serial /dev/ttyUSB0 "E01INF"
 ### Windows
 
 ```powershell
-.\test_serial.exe COM3 "E01INF"
+.\Debug\test_serial.exe COM3 "E01INF"
+```
+
+※ `usbipd`でWSLにattachしてるときはそれをwslからdetatchすること
+```powerchesll
+usbipd detach --busid 1-1
 ```
 
 ### 動的ライブラリの動作確認
@@ -182,12 +227,15 @@ winget install usbipd
 
 #【接続されているUSBデバイスを表示】
 usbipd list
-  1-1    0403:6015  USB Serial Converter                                          Attached
+  1-1    0403:6015  USB Serial Converter       Attached
 　⇒ USBシリアルが1-1というIDであることがわかる。
 
 #【WSL側で使いたいデバイスをバインド】
 usbipd bind --busid 1-1
 
-#【WSL側で使いたいデバイスをバインド】
+#【WSL側で使いたいデバイスをアタッチ】
 usbipd attach --busid 1-1 --wsl
+
+#【\デバイスをデタッチ】
+usbipd detach --busid 1-1
 ```
