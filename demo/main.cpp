@@ -19,7 +19,7 @@ int main(int argc, char **argv)
     if (argc >= 3)
         cmd = argv[2];
 
-    bool ok = pamc204::send_command(port, cmd);
+    bool ok = pamc204::send_command(cmd);
     std::cout << (ok ? "OK" : "NG") << std::endl;
     return ok ? 0 : 1;
 }

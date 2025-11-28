@@ -12,7 +12,11 @@
 #include "pamc204_internal.h"
 #include <cerrno>
 #include <cstring>
-
+#include <filesystem>
+#include <cstdlib>
+#include <array>
+#include <sstream>
+#include <algorithm>
 // --- 共有のヘルパー（serial_common.h にある実装の宣言） ---
 std::string to_upper_ascii(const std::string &s);
 std::string find_error_token(const std::string &resp);
@@ -114,11 +118,61 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
     return response;
 }
 
+// --- USBポート自動検出 ---
+static std::string detect_pamc204_port_linux(const std::string &vid = "0403", const std::string &pid = "6015")
+{
+    namespace fs = std::filesystem;
+    for (const auto &entry : fs::directory_iterator("/dev"))
+    {
+        if (entry.path().string().find("ttyUSB") != std::string::npos ||
+            entry.path().string().find("ttyACM") != std::string::npos)
+        {
+            std::string devPath = entry.path().string();
+
+            // 念のため改行やスペースを除去
+            devPath.erase(std::remove(devPath.begin(), devPath.end(), '\n'), devPath.end());
+            devPath.erase(std::remove(devPath.begin(), devPath.end(), '\r'), devPath.end());
+            devPath.erase(std::remove(devPath.begin(), devPath.end(), ' '), devPath.end());
+
+            std::string cmd = "udevadm info --query=property --name=" + devPath;
+            std::array<char, 512> buffer{};
+            std::string result;
+            FILE *pipe = popen(cmd.c_str(), "r");
+            if (!pipe) continue;
+            while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
+            {
+                result += buffer.data();
+            }
+            pclose(pipe);
+
+            if (result.find("ID_VENDOR_ID=" + vid) != std::string::npos &&
+                result.find("ID_MODEL_ID=" + pid) != std::string::npos)
+            {
+                // udevadm実行後にデバイス安定化のため少し待機
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                return devPath; // 見つかったポートを返す
+            }
+        }
+    }
+    return "";
+}
+
+
+
 // 共通API（Linux版）
 namespace pamc204
 {
-    bool send_command(const std::string &portName, const std::string &command)
+    bool send_command(const std::string &command)
     {
+        // ポート名の決定（自動検出）
+        std::string portName = detect_pamc204_port_linux();
+        std::fprintf(stdout, "PORT NAME: '%s'\n", portName.c_str());
+        if (portName.empty())
+        {
+            std::fprintf(stderr, "No PAMC204 device found\n");
+            return false;
+        }
+
         // ポートを開く
         int fd = ::open(portName.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
         if (fd < 0)
@@ -174,12 +228,12 @@ namespace pamc204
 }
 
 // C API エクスポート用ラッパー
-extern "C" bool send_command(const char *portName, const char *command)
+extern "C" bool send_command(const char *command)
 {
-    if (!portName || !command)
+    if (!command)
     {
         std::fprintf(stderr, "send_command: invalid arguments\n");
         return false;
     }
-    return pamc204::send_command(std::string(portName), std::string(command));
+    return pamc204::send_command(std::string(command));
 }

@@ -190,7 +190,7 @@ ERROR: BUSY - ドライバが駆動中です。停止後に再送信してくだ
 ### Linux / WSL2
 
 ```bash
-sudo ./test_serial /dev/ttyUSB0 "E01INF"
+sudo ./test_serial "E01INF"
 ```
 
 ### Windows
