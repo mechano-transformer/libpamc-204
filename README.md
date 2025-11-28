@@ -196,7 +196,12 @@ sudo ./test_serial /dev/ttyUSB0 "E01INF"
 ### Windows
 
 ```powershell
-.\test_serial.exe COM3 "E01INF"
+.\Debug\test_serial.exe COM3 "E01INF"
+```
+
+※ `usbipd`でWSLにattachしてるときはそれをwslからdetatchすること
+```powerchesll
+usbipd detach --busid 1-1
 ```
 
 ### 動的ライブラリの動作確認
@@ -222,12 +227,15 @@ winget install usbipd
 
 #【接続されているUSBデバイスを表示】
 usbipd list
-  1-1    0403:6015  USB Serial Converter                                          Attached
+  1-1    0403:6015  USB Serial Converter       Attached
 　⇒ USBシリアルが1-1というIDであることがわかる。
 
 #【WSL側で使いたいデバイスをバインド】
 usbipd bind --busid 1-1
 
-#【WSL側で使いたいデバイスをバインド】
+#【WSL側で使いたいデバイスをアタッチ】
 usbipd attach --busid 1-1 --wsl
+
+#【\デバイスをデタッチ】
+usbipd detach --busid 1-1
 ```
