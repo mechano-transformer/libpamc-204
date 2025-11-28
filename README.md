@@ -19,7 +19,6 @@ Windows では DLL、Linux/WSL2 では SO としてビルドできます。
 libpamc-204/
 ├── CMakeLists.txt              # ビルド設定（Windows/Linux両対応）
 ├── README.md
-├── .gitignore
 ├── include/                    # 公開ヘッダ
 │   ├── serial.h                # メインAPI
 │   └── serial_common.h         # 共通ユーティリティ
@@ -32,11 +31,8 @@ libpamc-204/
 │       │   └── serial.cpp      # Windows実装（Win32 API）
 │       └── linux/
 │           └── serial.cpp      # Linux実装（termios）
-├── demo/                       # サンプルコード
-│   └── main.cpp
-└── docs/                       # ドキュメント
-    ├── API_COMPARISON.md       # CmdLibとの対応表
-    └── *.pdf                   # 製品仕様書
+└── demo/                       # サンプルコード
+    └── main.cpp
 ```
 
 ## 🔧 ビルド方法
