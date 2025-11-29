@@ -236,3 +236,9 @@ usbipd attach --busid 1-1 --wsl
 #【\デバイスをデタッチ】
 usbipd detach --busid 1-1
 ```
+
+2. USBデバイスの`VID(Vendor ID)`と`PID(Product ID)`について
+```c++
+static std::string detect_port_name(const std::string &vid = "0403", const std::string &pid = "6015")
+```
+を使用している
