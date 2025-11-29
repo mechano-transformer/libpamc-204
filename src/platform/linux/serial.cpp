@@ -163,6 +163,8 @@ namespace pamc204
 {
     bool send_command(const std::string &command)
     {
+        std::fprintf(stdout, "COMMAND TO EXECUTE: '%s'\n", command.c_str());
+
         // ポート名の決定（自動検出）
         std::string portName = detect_port_name();
         std::fprintf(stdout, "PORT NAME: '%s'\n", portName.c_str());

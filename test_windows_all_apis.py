@@ -1,5 +1,5 @@
 ﻿"""Windows環境で全APIを順に試すスクリプト"""
-from ctypes import CDLL, c_char_p
+from ctypes import CDLL, c_char
 from ctypes import wintypes
 
 # DLLをロード（cdecl 前提。stdcall の場合は WinDLL に切り替え）
@@ -7,7 +7,7 @@ lib = CDLL("./build/Debug/pamc204.dll")
 
 # API群のシグネチャ定義（port 引数をすべて削除）
 lib.pamc204_send_command.restype = wintypes.BOOL
-lib.pamc204_send_command.argtypes = [c_char_p]
+lib.pamc204_send_command.argtypes = [c_char]
 
 lib.pamc204_get_firmware_version.restype = wintypes.BOOL
 lib.pamc204_get_firmware_version.argtypes = [wintypes.INT]
@@ -22,16 +22,16 @@ lib.pamc204_set_voltage.restype = wintypes.BOOL
 lib.pamc204_set_voltage.argtypes = [wintypes.INT, wintypes.INT]
 
 lib.pamc204_rotate_positive.restype = wintypes.BOOL
-lib.pamc204_rotate_positive.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char_p]
+lib.pamc204_rotate_positive.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char]
 
 lib.pamc204_rotate_positive_ex.restype = wintypes.BOOL
-lib.pamc204_rotate_positive_ex.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char_p]
+lib.pamc204_rotate_positive_ex.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char]
 
 lib.pamc204_rotate_negative.restype = wintypes.BOOL
-lib.pamc204_rotate_negative.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char_p]
+lib.pamc204_rotate_negative.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char]
 
 lib.pamc204_rotate_negative_ex.restype = wintypes.BOOL
-lib.pamc204_rotate_negative_ex.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char_p]
+lib.pamc204_rotate_negative_ex.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT, c_char]
 
 lib.pamc204_stop.restype = wintypes.BOOL
 lib.pamc204_stop.argtypes = [wintypes.INT]
@@ -52,9 +52,9 @@ tests = [
     ("rotate_positive_1500Hz_1500pulses", lambda: lib.pamc204_rotate_positive(address, 1500, 1500, b"A")),
     ("rotate_positive_ex_1500Hz_100000pulses", lambda: lib.pamc204_rotate_positive_ex(address, 1500, 100000, b"A")),
     ("rotate_positive_continuous", lambda: lib.pamc204_rotate_positive(address, 1500, 0, b"A")),
-    ("rotate_negative_1500Hz_1500pulses", lambda: lib.pamc204_rotate_negative(address, 1500, 1500, b"B")),
-    ("rotate_negative_ex_1500Hz_100000pulses", lambda: lib.pamc204_rotate_negative_ex(address, 1500, 100000, b"B")),
-    ("rotate_negative_continuous", lambda: lib.pamc204_rotate_negative(address, 1500, 0, b"C")),
+    ("rotate_negative_1500Hz_1500pulses", lambda: lib.pamc204_rotate_negative(address, 1500, 1500, b"A")),
+    ("rotate_negative_ex_1500Hz_100000pulses", lambda: lib.pamc204_rotate_negative_ex(address, 1500, 100000, b"A")),
+    ("rotate_negative_continuous", lambda: lib.pamc204_rotate_negative(address, 1500, 0, b"A")),
     ("stop", lambda: lib.pamc204_stop(address)),
 ]
 

@@ -198,6 +198,8 @@ namespace pamc204 {
     // 共通API（Windows版, Linux版と同じ仕様: cmdのみ受け取る）
     bool send_command(const std::string &command)
     {
+        std::fprintf(stdout, "COMMAND TO EXECUTE: '%s'\n", command.c_str());
+
         // 自動検出
         std::string com = detect_port_name(); // 例: "COM3"
         std::fprintf(stdout, "PORT NAME: '%s'\n", com.c_str());
