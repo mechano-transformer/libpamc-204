@@ -11,7 +11,6 @@ namespace pamc204
 {
     /**
      * @brief 汎用コマンド送信（低レベルAPI）
-     * @param portName ポート名（Windows: "COM3", Linux: "/dev/ttyUSB0"）
      * @param command コマンド文字列
      * @return 成功時 true、失敗時 false
      */

@@ -2,7 +2,7 @@
 
 クロスプラットフォーム対応のPAMC204制御用ライブラリです。  
 Windows では DLL、Linux/WSL2 では SO としてビルドできます。  
-共通 API `pamc204::send_command(portName, command)` を提供し、OS ごとに内部実装を切り替えています。
+共通 API `pamc204::send_command(command)` を提供し、OS ごとに内部実装を切り替えています。
 
 ## 📦 必要環境
 
