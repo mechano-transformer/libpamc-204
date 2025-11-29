@@ -46,7 +46,7 @@ tests = [
     ("send_command_E01", lambda: lib.pamc204_send_command(port, b"E01")),
     ("get_firmware_version", lambda: lib.pamc204_get_firmware_version(port, address)),
     ("check_device", lambda: lib.pamc204_check_device(port, address)),
-    ("set_address", lambda: lib.pamc204_set_address(port, 2)),  # E01 → E02
+    ("set_address", lambda: lib.pamc204_set_address(port, 1)),  # E01
     ("set_voltage_150V", lambda: lib.pamc204_set_voltage(port, address, 4095)),
     ("set_voltage_110V", lambda: lib.pamc204_set_voltage(port, address, 3000)),
     ("set_voltage_70V", lambda: lib.pamc204_set_voltage(port, address, 1900)),
