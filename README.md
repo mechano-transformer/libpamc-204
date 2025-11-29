@@ -196,7 +196,7 @@ sudo ./test_serial "E01INF"
 ### Windows
 
 ```powershell
-.\Debug\test_serial.exe COM3 "E01INF"
+.\Debug\test_serial.exe "E01INF"
 ```
 
 ※ `usbipd`でWSLにattachしてるときはそれをwslからdetatchすること

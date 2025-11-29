@@ -35,8 +35,7 @@ lib.pamc204_rotate_negative_ex.argtypes = [c_int, c_int, c_int, c_char_p]
 lib.pamc204_stop.restype = c_bool
 lib.pamc204_stop.argtype = c_int
 
-# テスト対象ポートとアドレス
-port = b"/dev/ttyUSB0"
+# テスト対象アドレス
 address = 1  # E01
 
 # 呼び出し例をリスト化（send_command を最初に追加）
