@@ -36,6 +36,11 @@ set_target_properties(pamc204 PROPERTIES
     OUTPUT_NAME "pamc204"
 )
 
+# Windows の場合は SetupAPI をリンク
+if(WIN32)
+    target_link_libraries(pamc204 PRIVATE SetupAPI)
+endif()
+
 # テスト用実行ファイル
 add_executable(test_serial demo/main.cpp)
 target_link_libraries(test_serial pamc204)

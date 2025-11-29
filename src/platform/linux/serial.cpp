@@ -12,6 +12,10 @@
 #include "pamc204_internal.h"
 #include <cerrno>
 #include <cstring>
+#include <filesystem>
+#include <cstdlib>
+#include <array>
+#include <sstream>
 
 // --- 共有のヘルパー（serial_common.h にある実装の宣言） ---
 std::string to_upper_ascii(const std::string &s);
@@ -19,7 +23,7 @@ std::string find_error_token(const std::string &resp);
 std::string get_error_description(const std::string &error_token);
 
 // Linux: 出力は stdout に行う
-static void output_response_once_linux(const std::string &resp)
+static void output_response(const std::string &resp)
 {
     if (resp.empty())
         return;
@@ -41,7 +45,7 @@ static void output_response_once_linux(const std::string &resp)
 }
 
 // termios 設定（115200 8N1 / フロー制御なし）
-static bool configure_port_linux(int fd)
+static bool configure_port(int fd)
 {
     struct termios tty;
     if (tcgetattr(fd, &tty) != 0)
@@ -65,7 +69,7 @@ static bool configure_port_linux(int fd)
 }
 
 // レスポンス読み取り（Windows版のロジックに近いポーリング）
-static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 2000, int idleTimeoutMs = 200, size_t bufSize = 1024)
+static std::string read_response(int fd, int totalTimeoutMs = 2000, int idleTimeoutMs = 200, size_t bufSize = 1024)
 {
     std::string response;
     std::vector<char> buf(bufSize);
@@ -114,11 +118,53 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
     return response;
 }
 
+// --- USBポート自動検出 ---
+
+static std::string detect_port_name(const std::string &vid = "0403", const std::string &pid = "6015")
+{
+    namespace fs = std::filesystem;
+    for (const auto &entry : fs::directory_iterator("/dev"))
+    {
+        if (entry.path().string().find("ttyUSB") != std::string::npos ||
+            entry.path().string().find("ttyACM") != std::string::npos)
+        {
+            std::string devPath = entry.path().string();
+            std::string cmd = "udevadm info --query=property --name=" + devPath;
+            std::array<char, 512> buffer{};
+            std::string result;
+            FILE *pipe = popen(cmd.c_str(), "r");
+            if (!pipe) continue;
+            while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
+            {
+                result += buffer.data();
+            }
+            pclose(pipe);
+
+            if (result.find("ID_VENDOR_ID=" + vid) != std::string::npos &&
+                result.find("ID_MODEL_ID=" + pid) != std::string::npos)
+            {
+                return devPath; // 見つかったポートを返す
+            }
+        }
+    }
+    return "";
+}
+
+
 // 共通API（Linux版）
 namespace pamc204
 {
-    bool send_command(const std::string &portName, const std::string &command)
+    bool send_command(const std::string &command)
     {
+        // ポート名の決定（自動検出）
+        std::string portName = detect_port_name();
+        std::fprintf(stdout, "PORT NAME: '%s'\n", portName.c_str());
+        if (portName.empty())
+        {
+            std::fprintf(stderr, "No PAMC204 device found\n");
+            return false;
+        }
+
         // ポートを開く
         int fd = ::open(portName.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
         if (fd < 0)
@@ -129,7 +175,7 @@ namespace pamc204
         }
 
         // 設定
-        bool ok = configure_port_linux(fd);
+        bool ok = configure_port(fd);
         if (!ok)
         {
             std::fprintf(stderr, "configure_port failed: %s\n", strerror(errno));
@@ -149,7 +195,7 @@ namespace pamc204
         }
 
         // 読み取り
-        std::string resp = read_response_from_port_linux(fd);
+        std::string resp = read_response(fd);
         if (resp.empty())
         {
             std::fprintf(stderr, "read timeout or empty response\n");
@@ -167,19 +213,19 @@ namespace pamc204
                 std::fflush(stdout);
                 return false;
             }
-            output_response_once_linux(resp);
+            output_response(resp);
         }
         return true;
     }
 }
 
 // C API エクスポート用ラッパー
-extern "C" bool send_command(const char *portName, const char *command)
+extern "C" bool send_command(const char *command)
 {
-    if (!portName || !command)
+    if (!command)
     {
         std::fprintf(stderr, "send_command: invalid arguments\n");
         return false;
     }
-    return pamc204::send_command(std::string(portName), std::string(command));
+    return pamc204::send_command(std::string(command));
 }

@@ -3,23 +3,12 @@
 
 int main(int argc, char **argv)
 {
-    std::string port;
-    std::string cmd = "E01INF";
+    std::string cmd = "E01INF";  // デフォルトコマンド
 
     if (argc >= 2)
-        port = argv[1];
+        cmd = argv[1];  // 引数は cmd のみ受け取る
 
-#if defined(_WIN32)
-    if (port.empty())
-        port = "COM3"; // Windows のデフォルト
-#else
-    if (port.empty())
-        port = "/dev/ttyUSB0"; // Linux のデフォルト
-#endif
-    if (argc >= 3)
-        cmd = argv[2];
-
-    bool ok = pamc204::send_command(port, cmd);
+    bool ok = pamc204::send_command(cmd);
     std::cout << (ok ? "OK" : "NG") << std::endl;
     return ok ? 0 : 1;
 }
