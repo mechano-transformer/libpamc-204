@@ -153,7 +153,9 @@ static void output_response_once(const std::string &resp) {
 }
 
 // --- COMポート自動検出 (VID/PID指定) ---
-static std::string detect_port_name(const std::string &vid = "0403", const std::string &pid = "6015") {
+static std::string detect_port_name(const std::string &vid = "0403",
+                                    const std::string &pid = "6015")
+{
     HDEVINFO hDevInfo = SetupDiGetClassDevs(&GUID_DEVCLASS_PORTS, NULL, NULL, DIGCF_PRESENT);
     if (hDevInfo == INVALID_HANDLE_VALUE) return "";
 
@@ -162,24 +164,32 @@ static std::string detect_port_name(const std::string &vid = "0403", const std::
 
     for (DWORD i = 0; SetupDiEnumDeviceInfo(hDevInfo, i, &devInfoData); i++) {
         char hwidBuf[1024];
-        if (SetupDiGetDeviceRegistryPropertyA(hDevInfo, &devInfoData, SPDRP_HARDWAREID,
-                                              NULL, (PBYTE)hwidBuf, sizeof(hwidBuf), NULL)) {
-            std::string hwid = hwidBuf;
-            if (hwid.find("VID_" + vid) != std::string::npos &&
-                hwid.find("PID_" + pid) != std::string::npos) {
-                HKEY hKey = SetupDiOpenDevRegKey(hDevInfo, &devInfoData, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);
-                if (hKey != INVALID_HANDLE_VALUE) {
-                    char portName[256]; DWORD size = sizeof(portName); DWORD type = 0;
-                    if (RegQueryValueExA(hKey, "PortName", NULL, &type, (LPBYTE)portName, &size) == ERROR_SUCCESS) {
-                        RegCloseKey(hKey);
-                        SetupDiDestroyDeviceInfoList(hDevInfo);
-                        return std::string(portName); // "COM3" など
-                    }
-                    RegCloseKey(hKey);
-                }
-            }
+        if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &devInfoData, SPDRP_HARDWAREID,
+                                               NULL, (PBYTE)hwidBuf, sizeof(hwidBuf), NULL)) {
+            continue;
         }
+
+        std::string hwid = hwidBuf;
+        if (hwid.find("VID_" + vid) == std::string::npos ||
+            hwid.find("PID_" + pid) == std::string::npos) {
+            continue;
+        }
+
+        // VID/PID一致 → レジストリから COMポート名を取得
+        HKEY hKey = SetupDiOpenDevRegKey(hDevInfo, &devInfoData,
+                                         DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);
+        if (hKey == INVALID_HANDLE_VALUE) continue;
+
+        char portName[256]; DWORD size = sizeof(portName); DWORD type = 0;
+        if (RegQueryValueExA(hKey, "PortName", NULL, &type,
+                             (LPBYTE)portName, &size) == ERROR_SUCCESS) {
+            RegCloseKey(hKey);
+            SetupDiDestroyDeviceInfoList(hDevInfo);
+            return std::string(portName); // 例: "COM3"
+        }
+        RegCloseKey(hKey);
     }
+
     SetupDiDestroyDeviceInfoList(hDevInfo);
     return "";
 }

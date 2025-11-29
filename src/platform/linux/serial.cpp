@@ -119,34 +119,41 @@ static std::string read_response(int fd, int totalTimeoutMs = 2000, int idleTime
 }
 
 // --- USBポート自動検出 ---
-
-static std::string detect_port_name(const std::string &vid = "0403", const std::string &pid = "6015")
+// 指定した VID/PID に一致するシリアルポートを探す
+static std::string detect_port_name(const std::string &vid = "0403",
+                                    const std::string &pid = "6015")
 {
     namespace fs = std::filesystem;
-    for (const auto &entry : fs::directory_iterator("/dev"))
-    {
-        if (entry.path().string().find("ttyUSB") != std::string::npos ||
-            entry.path().string().find("ttyACM") != std::string::npos)
-        {
-            std::string devPath = entry.path().string();
-            std::string cmd = "udevadm info --query=property --name=" + devPath;
-            std::array<char, 512> buffer{};
-            std::string result;
-            FILE *pipe = popen(cmd.c_str(), "r");
-            if (!pipe) continue;
-            while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
-            {
-                result += buffer.data();
-            }
-            pclose(pipe);
 
-            if (result.find("ID_VENDOR_ID=" + vid) != std::string::npos &&
-                result.find("ID_MODEL_ID=" + pid) != std::string::npos)
-            {
-                return devPath; // 見つかったポートを返す
-            }
+    for (const auto &entry : fs::directory_iterator("/dev")) {
+        const std::string devPath = entry.path().string();
+
+        // 対象は ttyUSB* または ttyACM*
+        if (devPath.find("ttyUSB") == std::string::npos &&
+            devPath.find("ttyACM") == std::string::npos) {
+            continue;
+        }
+
+        // udevadm でデバイス情報を取得
+        std::string cmd = "udevadm info --query=property --name=" + devPath;
+        std::array<char, 512> buffer{};
+        std::string result;
+        FILE *pipe = popen(cmd.c_str(), "r");
+        if (!pipe) continue;
+
+        while (fgets(buffer.data(), buffer.size(), pipe)) {
+            result += buffer.data();
+        }
+        pclose(pipe);
+
+        // VID/PID が一致すればこのポートを返す
+        if (result.find("ID_VENDOR_ID=" + vid) != std::string::npos &&
+            result.find("ID_MODEL_ID=" + pid) != std::string::npos) {
+            return devPath;
         }
     }
+
+    // 見つからなければ空文字列
     return "";
 }
 

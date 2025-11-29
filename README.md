@@ -205,6 +205,14 @@ usbipd detach --busid 1-1
 
 `test_linux.py`,`test_windows.py`を用意したのでこれを実行することによりライブラリの動作確認が行えます。
 
+```bash
+sudo python3 test_linux_all_apis.py 
+```
+
+```powershell
+python3 test_windows_all_apis.py 
+```
+
 ## 🧪 テスト記録
 
 - Windows
