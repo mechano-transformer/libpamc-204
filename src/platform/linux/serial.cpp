@@ -23,7 +23,7 @@ std::string find_error_token(const std::string &resp);
 std::string get_error_description(const std::string &error_token);
 
 // Linux: 出力は stdout に行う
-static void output_response_once_linux(const std::string &resp)
+static void output_response(const std::string &resp)
 {
     if (resp.empty())
         return;
@@ -45,7 +45,7 @@ static void output_response_once_linux(const std::string &resp)
 }
 
 // termios 設定（115200 8N1 / フロー制御なし）
-static bool configure_port_linux(int fd)
+static bool configure_port(int fd)
 {
     struct termios tty;
     if (tcgetattr(fd, &tty) != 0)
@@ -69,7 +69,7 @@ static bool configure_port_linux(int fd)
 }
 
 // レスポンス読み取り（Windows版のロジックに近いポーリング）
-static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 2000, int idleTimeoutMs = 200, size_t bufSize = 1024)
+static std::string read_response(int fd, int totalTimeoutMs = 2000, int idleTimeoutMs = 200, size_t bufSize = 1024)
 {
     std::string response;
     std::vector<char> buf(bufSize);
@@ -120,7 +120,7 @@ static std::string read_response_from_port_linux(int fd, int totalTimeoutMs = 20
 
 // --- USBポート自動検出 ---
 
-static std::string detect_pamc204_port_linux(const std::string &vid = "0403", const std::string &pid = "6015")
+static std::string detect_port_name(const std::string &vid = "0403", const std::string &pid = "6015")
 {
     namespace fs = std::filesystem;
     for (const auto &entry : fs::directory_iterator("/dev"))
@@ -157,7 +157,7 @@ namespace pamc204
     bool send_command(const std::string &command)
     {
         // ポート名の決定（自動検出）
-        std::string portName = detect_pamc204_port_linux();
+        std::string portName = detect_port_name();
         std::fprintf(stdout, "PORT NAME: '%s'\n", portName.c_str());
         if (portName.empty())
         {
@@ -175,7 +175,7 @@ namespace pamc204
         }
 
         // 設定
-        bool ok = configure_port_linux(fd);
+        bool ok = configure_port(fd);
         if (!ok)
         {
             std::fprintf(stderr, "configure_port failed: %s\n", strerror(errno));
@@ -195,7 +195,7 @@ namespace pamc204
         }
 
         // 読み取り
-        std::string resp = read_response_from_port_linux(fd);
+        std::string resp = read_response(fd);
         if (resp.empty())
         {
             std::fprintf(stderr, "read timeout or empty response\n");
@@ -213,7 +213,7 @@ namespace pamc204
                 std::fflush(stdout);
                 return false;
             }
-            output_response_once_linux(resp);
+            output_response(resp);
         }
         return true;
     }
