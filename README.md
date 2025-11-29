@@ -84,16 +84,16 @@ cmake --build .
 #include "pamc204.h"
 
 // C++ API（名前空間で保護）
-pamc204::get_firmware_version("COM3", 1);           // E01INF
-pamc204::check_device("COM3", 1);                   // E01
-pamc204::set_voltage("COM3", 1, 4095);              // E01DAC4095 (150V)
-pamc204::rotate_positive("COM3", 1, 1500, 1000, 'A'); // E01NR15001000A
-pamc204::stop("COM3", 1);                           // E01S
+pamc204::get_firmware_version(1);           // E01INF
+pamc204::check_device(1);                   // E01
+pamc204::set_voltage(1, 4095);              // E01DAC4095 (150V)
+pamc204::rotate_positive(1, 1500, 1000, 'A'); // E01NR15001000A
+pamc204::stop(1);                           // E01S
 
 // C API（pamc204_プレフィックスで保護）
-pamc204_get_firmware_version("COM3", 1);
-pamc204_rotate_positive("COM3", 1, 1500, 1000, 'A');
-pamc204_stop("COM3", 1);
+pamc204_get_firmware_version(1);
+pamc204_rotate_positive(1, 1500, 1000, 'A');
+pamc204_stop(1);
 ```
 
 ### 🔧 低レベルAPI
@@ -104,16 +104,13 @@ pamc204_stop("COM3", 1);
 #include "pamc204.h"
 
 // C++ API
-pamc204::send_command("COM3", "E01INF");
-pamc204::send_command("COM3", "E01NR15001000A");
+pamc204::send_command("E01INF");
+pamc204::send_command("E01NR15001000A");
 
 // C API
-pamc204_send_command("COM3", "E01INF");
+pamc204_send_command("E01INF");
 ```
 
-- `portName`: OSごとのポート指定
-  - Windows: `"COM3"` や `"\\\\.\\COM3"`
-  - Linux: `"/dev/ttyUSB0"`
 - `command`: 送信する文字列（CRLF が自動付加されます）
 
 戻り値:
@@ -141,19 +138,19 @@ PAMC-204のコマンド仕様に基づく使用例：
 
 | 機能 | コマンド例 | 説明 |
 |------|-----------|------|
-| **ファームウェアバージョン確認** | `send_command(port, "E01INF")` | アドレスE01のドライバのファームウェアバージョンを取得 |
-| **デバイス存在確認** | `send_command(port, "E01")` | アドレスE01のドライバが接続されているか確認 |
-| **アドレス変更** | `send_command(port, "SETADDR02")` | 接続中のドライバのアドレスをE02に変更 |
-| **出力電圧調整** | `send_command(port, "E01DAC4095")` | アドレスE01の出力電圧を150Vに設定 |
-| | `send_command(port, "E01DAC3000")` | アドレスE01の出力電圧を110Vに設定 |
-| | `send_command(port, "E01DAC1900")` | アドレスE01の出力電圧を70Vに設定 |
-| **正回転駆動（パルス指定）** | `send_command(port, "E01NR15001500A")` | E01のCH1を1500Hzで1500パルス正回転 |
-| | `send_command(port, "E01NR1500X100000A")` | E01のCH1を1500Hzで100000パルス正回転 |
-| **正回転駆動（連続）** | `send_command(port, "E01NR15000000A")` | E01のCH1を1500Hzで連続正回転 |
-| **逆回転駆動（パルス指定）** | `send_command(port, "E01RR15001500B")` | E01のCH2を1500Hzで1500パルス逆回転 |
-| | `send_command(port, "E01RR1500X100000B")` | E01のCH2を1500Hzで100000パルス逆回転 |
-| **逆回転駆動（連続）** | `send_command(port, "E01RR15000000C")` | E01のCH3を1500Hzで連続逆回転 |
-| **停止** | `send_command(port, "E01S")` | E01の連続駆動を停止 |
+| **ファームウェアバージョン確認** | `send_command("E01INF")` | アドレスE01のドライバのファームウェアバージョンを取得 |
+| **デバイス存在確認** | `send_command("E01")` | アドレスE01のドライバが接続されているか確認 |
+| **アドレス変更** | `send_command("SETADDR02")` | 接続中のドライバのアドレスをE02に変更 |
+| **出力電圧調整** | `send_command("E01DAC4095")` | アドレスE01の出力電圧を150Vに設定 |
+| | `send_command("E01DAC3000")` | アドレスE01の出力電圧を110Vに設定 |
+| | `send_command("E01DAC1900")` | アドレスE01の出力電圧を70Vに設定 |
+| **正回転駆動（パルス指定）** | `send_command("E01NR15001500A")` | E01のCH1を1500Hzで1500パルス正回転 |
+| | `send_command("E01NR1500X100000A")` | E01のCH1を1500Hzで100000パルス正回転 |
+| **正回転駆動（連続）** | `send_command("E01NR15000000A")` | E01のCH1を1500Hzで連続正回転 |
+| **逆回転駆動（パルス指定）** | `send_command("E01RR15001500B")` | E01のCH2を1500Hzで1500パルス逆回転 |
+| | `send_command("E01RR1500X100000B")` | E01のCH2を1500Hzで100000パルス逆回転 |
+| **逆回転駆動（連続）** | `send_command("E01RR15000000C")` | E01のCH3を1500Hzで連続逆回転 |
+| **停止** | `send_command("E01S")` | E01の連続駆動を停止 |
 
 #### コマンドフォーマット詳細
 
