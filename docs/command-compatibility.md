@@ -4,26 +4,26 @@
 
 ### 基本概念の対応関係
 
-- **周波数 (PAMC204) = Velocity (Model8742)**
-- **パルス数 (PAMC204) = ステップ数 (Model8742)**
+- **周波数 (PAMC204) [pulses/sec] = Velocity (Model8742) [steps/sec]**
+- **パルス数 (PAMC204) [pulses] = ステップ数 (Model8742) [steps]**
 
 ### 主要コマンド対比
 
 | 機能 | PAMC204 | Newport Model8742 | 備考 |
 |------|---------|-------------------|------|
-| **ファームウェアバージョン確認** | `ExxINF` | `VE?` または `*IDN?` | Model8742は2つのコマンドあり |
-| **アドレス確認** | `Exx` | `SA?` | PAMC204: xx=01 - 32<br>Model8742: 1-31 |
-| **アドレス設定** | `SETADDRxx` | `SA nn` | 両方ともRS-485ネットワーク用 |
-| **出力電圧調整** | `ExxDACnnnn` | - | PAMC204固有機能（70-150V） |
-| **正回転駆動** | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `xxPA nn`<br>`xxPR nn`<br>`xxMV+` | PAMC204: 周波数+パルス数指定<br>Model8742: 絶対位置/相対移動/連続 |
-| **逆回転駆動** | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `xxPA nn`<br>`xxPR nn`<br>`xxMV-` | 同上 |
-| **停止** | `ExxS` | `xxST`<br>`AB` | Model8742: ST=減速停止、AB=即停止 |
-| **速度設定** | - | `xxVA nn` | Model8742: 1-2000 steps/sec |
-| **加速度設定** | - | `xxAC nn` | Model8742: 1-200000 steps/sec² |
+| **1. ファームウェアバージョン確認** | `ExxINF` | `VE?` または `*IDN?` | PAMC204: ファームウェアバージョンとボーレート表示<br>Model8742: 2つのコマンドあり |
+| **2. アドレス確認** | `Exx` | `SA?` | PAMC204: xx=01-32、応答=`ExxOK`<br>Model8742: 1-31 |
+| **3. アドレス設定** | `SETADDRxx` | `SA nn` | PAMC204: 単一接続時のみ使用可能<br>両方ともRS-485ネットワーク用 |
+| **4. 出力電圧調整** | `ExxDACnnnn` | - | PAMC204固有機能（70-150V）<br>nnnn: 1900-4095（9段階） |
+| **5. 正回転駆動** | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `xxPA nn`<br>`xxPR nn`<br>`xxMV+` | PAMC204: 周波数(1-1500Hz)+パルス数(0-9999 or 0-999999)指定<br>yyyy=0000で連続駆動<br>Model8742: 絶対位置/相対移動/連続 |
+| **6. 逆回転駆動** | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `xxPA nn`<br>`xxPR nn`<br>`xxMV-` | 同上（逆方向） |
+| **7. 停止** | `ExxS` | `xxST`<br>`AB` | PAMC204: 連続駆動停止、応答=`ExxFINnnnn`（駆動パルス数表示）<br>Model8742: ST=減速停止、AB=即停止 |
+| **速度設定** | - | `xxVA nn` | Model8742固有: 1-2000 steps/sec |
+| **加速度設定** | - | `xxAC nn` | Model8742固有: 1-200000 steps/sec² |
 | **ホームポジション設定** | - | `xxDH nn` | Model8742固有機能 |
 | **位置確認** | - | `xxTP?` | Model8742固有機能 |
 | **モータータイプ設定** | - | `xxQM nn` | Model8742固有機能 |
-| **動作状態確認** | - | `xxMD?` | Model8742: 0=動作中、1=停止 |
+| **動作状態確認** | - | `xxMD?` | Model8742固有: 0=動作中、1=停止 |
 
 ### パラメータ詳細対比
 
@@ -62,7 +62,7 @@
 | 2200 | 80V |
 | 1900 | 70V |
 
-### 通信仕様対比
+## 通信仕様対比
 
 | 項目 | PAMC204 | Model8742 |
 |------|---------|-----------|
