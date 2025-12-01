@@ -89,11 +89,21 @@ pamc204::check_device(1);                   // E01
 pamc204::set_voltage(1, 4095);              // E01DAC4095 (150V)
 pamc204::rotate_positive(1, 1500, 1000, 'A'); // E01NR15001000A
 pamc204::stop(1);                           // E01S
+pamc204::set_velocity(1, 1, 1500);          // E011VA1500 (CH1の速度を1500に設定)
+pamc204::move_absolute(1, 1, 10000);        // E011PA10000 (CH1を絶対位置10000に移動)
+pamc204::move_relative(1, 1, 5000);         // E011PR5000 (CH1を相対位置+5000移動)
+pamc204::query_actual_position(1, 1);       // E011TP? (CH1の実位置問い合わせ)
+pamc204::move_infinite(1, 1, '+');          // E011MV+ (CH1を+方向に無限移動)
+pamc204::stop_motion(1, 1);                 // E011ST (CH1の動作停止)
+pamc204::abort_motion(1);                   // E01AB (全CH即停止)
 
 // C API（pamc204_プレフィックスで保護）
 pamc204_get_firmware_version(1);
 pamc204_rotate_positive(1, 1500, 1000, 'A');
 pamc204_stop(1);
+pamc204_set_velocity(1, 1, 1500);
+pamc204_move_absolute(1, 1, 10000);
+pamc204_query_actual_position(1, 1);
 ```
 
 ### 🔧 低レベルAPI
@@ -128,9 +138,23 @@ PAMC-204で使用可能なコマンド一覧：
 | 2 | `Exx` | アドレスを持つドライバーがネットワーク内に存在するかどうかを確認 |
 | 3 | `SETADDRxx` | ドライバのアドレスを変更 |
 | 4 | `ExxDACnnnn` | 駆動電圧の調整 |
-| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | 正回転駆動コマンド |
-| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | 逆回転駆動コマンド |
-| 7 | `ExxS` | 停止コマンド |
+| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | 正回転駆動コマンド（パルス駆動） |
+| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | 逆回転駆動コマンド（パルス駆動） |
+| 7 | `ExxS` | 停止コマンド（パルス駆動） |
+| 8 | `ExxAB` | モーション停止（全CH即停止） |
+| 9 | `ExxmVAnnnn` | 速度設定 |
+| 10 | `ExxmVA?` | 速度問い合わせ |
+| 11 | `ExxmDHnnnn` | ホームポジション設定 |
+| 12 | `ExxmDH?` | ホームポジション問い合わせ |
+| 13 | `ExxmPAnnnn` | 絶対位置移動 |
+| 14 | `ExxmPA?` | 絶対位置問い合わせ |
+| 15 | `ExxmPRnnnn` | 相対位置移動 |
+| 16 | `ExxmPR?` | 相対位置問い合わせ |
+| 17 | `ExxmTP?` | 実位置問い合わせ |
+| 18 | `ExxmMD?` | 動作状態確認 |
+| 19 | `ExxmMVn` | 無限移動 |
+| 20 | `ExxmMV?` | 移動方向問い合わせ |
+| 21 | `ExxmST` | 動作停止 |
 
 ### 📋 API使用例
 
@@ -151,8 +175,17 @@ PAMC-204のコマンド仕様に基づく使用例：
 | | `send_command("E01RR1500X100000B")` | E01のCH2を1500Hzで100000パルス逆回転 |
 | **逆回転駆動（連続）** | `send_command("E01RR15000000C")` | E01のCH3を1500Hzで連続逆回転 |
 | **停止** | `send_command("E01S")` | E01の連続駆動を停止 |
+| **速度設定** | `send_command("E011VA1500")` | E01のCH1の速度を1500 steps/secに設定 |
+| **絶対位置移動** | `send_command("E011PA10000")` | E01のCH1を絶対位置10000に移動 |
+| **相対位置移動** | `send_command("E011PR5000")` | E01のCH1を現在位置から+5000移動 |
+| **実位置問い合わせ** | `send_command("E011TP?")` | E01のCH1の現在位置を問い合わせ |
+| **無限移動** | `send_command("E011MV+")` | E01のCH1を+方向に無限移動 |
+| **動作停止** | `send_command("E011ST")` | E01のCH1の動作を停止 |
+| **モーション停止** | `send_command("E01AB")` | E01の全CHを即停止 |
 
 #### コマンドフォーマット詳細
+
+**パルス駆動コマンド:**
 
 - **アドレス**: `xx` = 01～32（例: E01, E02, ...）
 - **周波数**: `nnnn` = 0001～1500 Hz
@@ -161,6 +194,14 @@ PAMC-204のコマンド仕様に基づく使用例：
   - 6桁: `Xyyyyyy` = X000001～X999999（Xプレフィックス付き）
 - **チャンネル**: `z` = A（CH1）, B（CH2）, C（CH3）, D（CH4）
 - **出力電圧**: 70V～150V
+
+**位置制御コマンド:**
+
+- **アドレス**: `xx` = 01～32
+- **チャンネル**: `m` = 1～4
+- **速度**: `nnnn` = 1～1500 steps/sec
+- **位置**: `nnnn` = -2147483648～+2147483647
+- **方向**: `n` = +（正方向）または -（負方向）
 
 #### エラーメッセージ
 
@@ -197,6 +238,7 @@ sudo ./test_serial "E01INF"
 ```
 
 ※ `usbipd`でWSLにattachしてるときはそれをwslからdetatchすること
+
 ```powerchesll
 usbipd detach --busid 1-1
 ```
@@ -246,7 +288,9 @@ usbipd detach --busid 1-1
 ```
 
 2. USBデバイスの`VID(Vendor ID)`と`PID(Product ID)`について
+
 ```c++
 static std::string detect_port_name(const std::string &vid = "0403", const std::string &pid = "6015")
 ```
+
 を使用している

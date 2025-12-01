@@ -69,6 +69,108 @@ namespace pamc204
      * @brief モーター停止（ExxS）
      */
     bool stop(int address);
+
+    /**
+     * @brief モーション停止（ExxAB）
+     * @param address ドライバアドレス（1-32）
+     */
+    bool abort_motion(int address);
+
+    /**
+     * @brief 速度設定（ExxmVAnnnn）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     * @param velocity 速度（1-1500 steps/sec）
+     */
+    bool set_velocity(int address, int channel, int velocity);
+
+    /**
+     * @brief 速度問い合わせ（ExxmVA?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_velocity(int address, int channel);
+
+    /**
+     * @brief ホームポジション設定（ExxmDHnnnn）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     * @param position ホームポジション（-2147483648 ~ +2147483647）
+     */
+    bool set_home_position(int address, int channel, int position);
+
+    /**
+     * @brief ホームポジション問い合わせ（ExxmDH?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_home_position(int address, int channel);
+
+    /**
+     * @brief 絶対位置移動（ExxmPAnnnn）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     * @param position 絶対位置（-2147483648 ~ +2147483647）
+     */
+    bool move_absolute(int address, int channel, int position);
+
+    /**
+     * @brief 絶対位置問い合わせ（ExxmPA?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_absolute_position(int address, int channel);
+
+    /**
+     * @brief 相対位置移動（ExxmPRnnnn）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     * @param position 相対位置（-2147483648 ~ +2147483647）
+     */
+    bool move_relative(int address, int channel, int position);
+
+    /**
+     * @brief 相対位置問い合わせ（ExxmPR?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_relative_position(int address, int channel);
+
+    /**
+     * @brief 実位置問い合わせ（ExxmTP?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_actual_position(int address, int channel);
+
+    /**
+     * @brief 動作状態確認（ExxmMD?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_motion_status(int address, int channel);
+
+    /**
+     * @brief 無限移動（ExxmMVn）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     * @param direction 方向（'+' または '-'）
+     */
+    bool move_infinite(int address, int channel, char direction);
+
+    /**
+     * @brief 移動方向問い合わせ（ExxmMV?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_move_direction(int address, int channel);
+
+    /**
+     * @brief 動作停止（ExxmST）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool stop_motion(int address, int channel);
 }
 
 // ============================================================================
@@ -93,6 +195,20 @@ extern "C"
     bool pamc204_rotate_negative(int address, int frequency, int pulses, char channel);
     bool pamc204_rotate_negative_ex(int address, int frequency, int pulses, char channel);
     bool pamc204_stop(int address);
+    bool pamc204_abort_motion(int address);
+    bool pamc204_set_velocity(int address, int channel, int velocity);
+    bool pamc204_query_velocity(int address, int channel);
+    bool pamc204_set_home_position(int address, int channel, int position);
+    bool pamc204_query_home_position(int address, int channel);
+    bool pamc204_move_absolute(int address, int channel, int position);
+    bool pamc204_query_absolute_position(int address, int channel);
+    bool pamc204_move_relative(int address, int channel, int position);
+    bool pamc204_query_relative_position(int address, int channel);
+    bool pamc204_query_actual_position(int address, int channel);
+    bool pamc204_query_motion_status(int address, int channel);
+    bool pamc204_move_infinite(int address, int channel, char direction);
+    bool pamc204_query_move_direction(int address, int channel);
+    bool pamc204_stop_motion(int address, int channel);
 
 #ifdef __cplusplus
 }

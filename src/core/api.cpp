@@ -72,6 +72,104 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    bool abort_motion(int address)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02dAB", address);
+        return send_command(cmd);
+    }
+
+    bool set_velocity(int address, int channel, int velocity)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dVA%d", address, channel, velocity);
+        return send_command(cmd);
+    }
+
+    bool query_velocity(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dVA?", address, channel);
+        return send_command(cmd);
+    }
+
+    bool set_home_position(int address, int channel, int position)
+    {
+        char cmd[64];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dDH%d", address, channel, position);
+        return send_command(cmd);
+    }
+
+    bool query_home_position(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dDH?", address, channel);
+        return send_command(cmd);
+    }
+
+    bool move_absolute(int address, int channel, int position)
+    {
+        char cmd[64];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dPA%d", address, channel, position);
+        return send_command(cmd);
+    }
+
+    bool query_absolute_position(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dPA?", address, channel);
+        return send_command(cmd);
+    }
+
+    bool move_relative(int address, int channel, int position)
+    {
+        char cmd[64];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dPR%d", address, channel, position);
+        return send_command(cmd);
+    }
+
+    bool query_relative_position(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dPR?", address, channel);
+        return send_command(cmd);
+    }
+
+    bool query_actual_position(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dTP?", address, channel);
+        return send_command(cmd);
+    }
+
+    bool query_motion_status(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dMD?", address, channel);
+        return send_command(cmd);
+    }
+
+    bool move_infinite(int address, int channel, char direction)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dMV%c", address, channel, direction);
+        return send_command(cmd);
+    }
+
+    bool query_move_direction(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dMV?", address, channel);
+        return send_command(cmd);
+    }
+
+    bool stop_motion(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dST", address, channel);
+        return send_command(cmd);
+    }
+
 } // namespace pamc204
 
 // ============================================================================
@@ -131,6 +229,77 @@ extern "C"
     bool pamc204_stop(int address)
     {
         return pamc204::stop(address);
+    }
+
+    // 位置制御API
+    bool pamc204_abort_motion(int address)
+    {
+        return pamc204::abort_motion(address);
+    }
+
+    bool pamc204_set_velocity(int address, int channel, int velocity)
+    {
+        return pamc204::set_velocity(address, channel, velocity);
+    }
+
+    bool pamc204_query_velocity(int address, int channel)
+    {
+        return pamc204::query_velocity(address, channel);
+    }
+
+    bool pamc204_set_home_position(int address, int channel, int position)
+    {
+        return pamc204::set_home_position(address, channel, position);
+    }
+
+    bool pamc204_query_home_position(int address, int channel)
+    {
+        return pamc204::query_home_position(address, channel);
+    }
+
+    bool pamc204_move_absolute(int address, int channel, int position)
+    {
+        return pamc204::move_absolute(address, channel, position);
+    }
+
+    bool pamc204_query_absolute_position(int address, int channel)
+    {
+        return pamc204::query_absolute_position(address, channel);
+    }
+
+    bool pamc204_move_relative(int address, int channel, int position)
+    {
+        return pamc204::move_relative(address, channel, position);
+    }
+
+    bool pamc204_query_relative_position(int address, int channel)
+    {
+        return pamc204::query_relative_position(address, channel);
+    }
+
+    bool pamc204_query_actual_position(int address, int channel)
+    {
+        return pamc204::query_actual_position(address, channel);
+    }
+
+    bool pamc204_query_motion_status(int address, int channel)
+    {
+        return pamc204::query_motion_status(address, channel);
+    }
+
+    bool pamc204_move_infinite(int address, int channel, char direction)
+    {
+        return pamc204::move_infinite(address, channel, direction);
+    }
+
+    bool pamc204_query_move_direction(int address, int channel)
+    {
+        return pamc204::query_move_direction(address, channel);
+    }
+
+    bool pamc204_stop_motion(int address, int channel)
+    {
+        return pamc204::stop_motion(address, channel);
     }
 
 } // extern "C"
