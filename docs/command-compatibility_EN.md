@@ -18,12 +18,22 @@
 | **5. Forward Rotation Drive** | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `xxPA nn`<br>`xxPR nn`<br>`xxMV+` | PAMC204: Frequency(1-1500Hz)+Pulse count(0-9999 or 0-999999) specification<br>yyyy=0000 for continuous drive<br>Model8742: Absolute position/Relative move/Continuous |
 | **6. Reverse Rotation Drive** | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `xxPA nn`<br>`xxPR nn`<br>`xxMV-` | Same as above (reverse direction) |
 | **7. Stop** | `ExxS` | `xxST`<br>`AB` | PAMC204: Stops continuous drive, response=`ExxFINnnnn`(displays driven pulse count)<br>Model8742: ST=decelerated stop, AB=immediate stop |
-| **Velocity Setting** | - | `xxVA nn` | Model8742-specific: 1-2000 steps/sec |
+| **8. Motion Stop** | `ExxAB` | `AB` | PAMC204: Immediate stop all CH<br>Model8742: Immediate stop all axes |
+| **9. Velocity Setting** | `ExxmVAnnnn` | `xxVA nn` | PAMC204: 1-1500 steps/sec, m=1-4 (CH specification)<br>Model8742: 1-2000 steps/sec |
+| **10. Velocity Query** | `ExxmVA?` | `xxVA?` | PAMC204: m=1-4 (CH specification) |
+| **11. Home Position Setting** | `ExxmDHnnnn` | `xxDH nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647<br>Model8742: Absolute position setting |
+| **12. Home Position Query** | `ExxmDH?` | `xxDH?` | PAMC204: m=1-4 (CH specification) |
+| **13. Absolute Position Move** | `ExxmPAnnnn` | `xxPA nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647 |
+| **14. Absolute Position Query** | `ExxmPA?` | `xxPA?` | PAMC204: m=1-4 (CH specification), returns target position when moving, actual position when stopped |
+| **15. Relative Position Move** | `ExxmPRnnnn` | `xxPR nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647 |
+| **16. Relative Position Query** | `ExxmPR?` | `xxPR?` | PAMC204: m=1-4 (CH specification), returns target position when moving, actual position when stopped |
+| **17. Actual Position Query** | `ExxmTP?` | `xxTP?` | PAMC204: m=1-4 (CH specification), returns current actual position |
+| **18. Motion Status Check** | `ExxmMD?` | `xxMD?` | PAMC204: m=1-4 (CH specification), 0=moving, 1=stopped<br>Model8742: 0=moving, 1=stopped |
+| **19. Infinite Move** | `ExxmMVn` | `xxMV+/-` | PAMC204: m=1-4 (CH specification), n=+/- (direction specification) |
+| **20. Move Direction Query** | `ExxmMV?` | - | PAMC204-specific, m=1-4 (CH specification), 0=moving, 1=stopped |
+| **21. Motion Stop** | `ExxmST` | `xxST` | PAMC204: m=1-4 (CH specification), decelerated stop<br>Model8742: Decelerated stop |
 | **Acceleration Setting** | - | `xxAC nn` | Model8742-specific: 1-200000 steps/sec² |
-| **Home Position Setting** | - | `xxDH nn` | Model8742-specific feature |
-| **Position Check** | - | `xxTP?` | Model8742-specific feature |
 | **Motor Type Setting** | - | `xxQM nn` | Model8742-specific feature |
-| **Motion Status Check** | - | `xxMD?` | Model8742-specific: 0=moving, 1=stopped |
 
 ### Parameter Details Comparison
 
@@ -32,11 +42,14 @@
 | Parameter | Range | Description |
 |-----------|-------|-------------|
 | `xx` | 01-32 | Driver address |
-| `nnnn` | 0001-1500 | Drive frequency (Hz) |
+| `m` | 1-4 | Channel number (for position control commands) |
+| `nnnn` | 0001-1500 | Drive frequency (Hz) or Velocity (steps/sec) |
 | `yyyy` | 0000-9999 | Pulse count (0000=continuous drive) |
 | `yyyyyy` | 000001-999999 | Extended pulse count (with X) |
 | `z` | A-D | Drive axis (A=CH1, B=CH2, C=CH3, D=CH4) |
 | `nnnn` (DAC) | 1900-4095 | Output voltage setting value |
+| `nnnn` (position) | -2147483648 ~ +2147483647 | Absolute/Relative position |
+| `n` (direction) | +/- | Move direction (+: forward, -: reverse) |
 
 #### Model8742 Command Parameters
 
@@ -148,15 +161,17 @@ AB     (immediate stop)
 ### Summary of Main Differences
 
 1. **Command System**
-   - PAMC204: Specifies frequency and pulse count simultaneously in one command
+   - PAMC204:
+     - Pulse drive commands: Specifies frequency and pulse count simultaneously in one command (`ExxNR`/`ExxRR`)
+     - Position control commands: Model8742-compatible position control commands supported
    - Model8742: Separates velocity setting and movement commands
 
 2. **Voltage Control**
-   - PAMC204: Output voltage adjustable from 70-150V
+   - PAMC204: Output voltage adjustable from 70-150V (`ExxDACnnnn`)
    - Model8742: No voltage control feature
 
 3. **Position Management**
-   - PAMC204: Pulse count-based control
+   - PAMC204: Supports both pulse count-based control and position-based control
    - Model8742: Has concepts of absolute/relative position, home position setting available
 
 4. **Network**
@@ -169,14 +184,22 @@ AB     (immediate stop)
 
 ### Migration Considerations
 
-1. **Command Conversion Required**
-   - One PAMC204 command needs to be split into multiple Model8742 commands
+1. **Command System Selection**
+   - Pulse drive commands: Specifies frequency and pulse count in one command (simple)
+   - Position control commands: Model8742-compatible, position management available (advanced)
 
-2. **Voltage Control Alternative**
+2. **Voltage Control**
+   - PAMC204-specific `ExxDACnnnn` command for output voltage adjustment
    - Model8742 has no voltage control feature, adjust using velocity parameters instead
 
-3. **Position Management Differences**
-   - Model8742 has enhanced position feedback features, enabling more precise control
+3. **Position Management**
+   - PAMC204: Implements position feedback features similar to Model8742
+   - Absolute position, relative position, and home position setting available
 
 4. **Error Handling**
    - Error code systems differ, requiring review of error handling logic
+   - PAMC204 uses string-based errors, Model8742 uses numeric codes
+
+5. **Simultaneous Drive Limitation**
+   - PAMC204: Only 1 CH can be driven at a time per unit
+   - Driving another CH automatically stops the currently running motor
