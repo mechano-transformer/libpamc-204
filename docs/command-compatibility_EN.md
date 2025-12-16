@@ -2,6 +2,8 @@
 
 ## Command Comparison Table
 
+> **Disclaimer:** This document provides a command compatibility reference between PAMC204 and Newport Model8742. While the commands are designed to be compatible, **100% compatibility cannot be guaranteed** due to differences in hardware implementation, firmware behavior, and device-specific features. Users should thoroughly test all commands in their specific application environment before deployment.
+
 ### Basic Concept Correspondence
 
 - **Frequency (PAMC204) [pulses/sec] = Velocity (Model8742) [steps/sec]**
