@@ -36,6 +36,33 @@ lib.pamc204_rotate_negative_ex.argtypes = [wintypes.INT, wintypes.INT, wintypes.
 lib.pamc204_stop.restype = wintypes.BOOL
 lib.pamc204_stop.argtypes = [wintypes.INT]
 
+lib.pamc204_set_acceleration.restype = wintypes.BOOL
+lib.pamc204_set_acceleration.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
+
+lib.pamc204_query_acceleration.restype = wintypes.BOOL
+lib.pamc204_query_acceleration.argtypes = [wintypes.INT, wintypes.INT]
+
+lib.pamc204_set_velocity.restype = wintypes.BOOL
+lib.pamc204_set_velocity.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
+
+lib.pamc204_move_absolute.restype = wintypes.BOOL
+lib.pamc204_move_absolute.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
+
+lib.pamc204_move_relative.restype = wintypes.BOOL
+lib.pamc204_move_relative.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
+
+lib.pamc204_query_actual_position.restype = wintypes.BOOL
+lib.pamc204_query_actual_position.argtypes = [wintypes.INT, wintypes.INT]
+
+lib.pamc204_move_infinite.restype = wintypes.BOOL
+lib.pamc204_move_infinite.argtypes = [wintypes.INT, wintypes.INT, c_char]
+
+lib.pamc204_stop_motion.restype = wintypes.BOOL
+lib.pamc204_stop_motion.argtypes = [wintypes.INT, wintypes.INT]
+
+lib.pamc204_abort_motion.restype = wintypes.BOOL
+lib.pamc204_abort_motion.argtypes = [wintypes.INT]
+
 # テスト対象アドレス（E01）
 address = 1
 
@@ -56,6 +83,15 @@ tests = [
     ("rotate_negative_ex_1500Hz_100000pulses", lambda: lib.pamc204_rotate_negative_ex(address, 1500, 100000, b"A")),
     ("rotate_negative_continuous", lambda: lib.pamc204_rotate_negative(address, 1500, 0, b"A")),
     ("stop", lambda: lib.pamc204_stop(address)),
+    ("set_acceleration_10000", lambda: lib.pamc204_set_acceleration(address, 1, 10000)),
+    ("query_acceleration", lambda: lib.pamc204_query_acceleration(address, 1)),
+    ("set_velocity_1500", lambda: lib.pamc204_set_velocity(address, 1, 1500)),
+    ("move_absolute_10000", lambda: lib.pamc204_move_absolute(address, 1, 10000)),
+    ("move_relative_5000", lambda: lib.pamc204_move_relative(address, 1, 5000)),
+    ("query_actual_position", lambda: lib.pamc204_query_actual_position(address, 1)),
+    ("move_infinite_positive", lambda: lib.pamc204_move_infinite(address, 1, b"+")),
+    ("stop_motion", lambda: lib.pamc204_stop_motion(address, 1)),
+    ("abort_motion", lambda: lib.pamc204_abort_motion(address)),
 ]
 
 # 順に試す

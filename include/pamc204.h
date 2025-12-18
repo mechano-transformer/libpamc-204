@@ -77,6 +77,21 @@ namespace pamc204
     bool abort_motion(int address);
 
     /**
+     * @brief 加速度設定（ExxmACnnnn）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     * @param acceleration 加速度（1-150000 steps/sec²）
+     */
+    bool set_acceleration(int address, int channel, int acceleration);
+
+    /**
+     * @brief 加速度問い合わせ（ExxmAC?）
+     * @param address ドライバアドレス（1-32）
+     * @param channel チャンネル（1-4）
+     */
+    bool query_acceleration(int address, int channel);
+
+    /**
      * @brief 速度設定（ExxmVAnnnn）
      * @param address ドライバアドレス（1-32）
      * @param channel チャンネル（1-4）
@@ -196,6 +211,8 @@ extern "C"
     bool pamc204_rotate_negative_ex(int address, int frequency, int pulses, char channel);
     bool pamc204_stop(int address);
     bool pamc204_abort_motion(int address);
+    bool pamc204_set_acceleration(int address, int channel, int acceleration);
+    bool pamc204_query_acceleration(int address, int channel);
     bool pamc204_set_velocity(int address, int channel, int velocity);
     bool pamc204_query_velocity(int address, int channel);
     bool pamc204_set_home_position(int address, int channel, int position);
