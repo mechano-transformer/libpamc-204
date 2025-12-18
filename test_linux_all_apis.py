@@ -1,5 +1,6 @@
 ﻿"""Linux環境で全APIを順に試すスクリプト"""
 from ctypes import CDLL, c_char, c_bool, c_int
+import time
 
 # 共有ライブラリをロード
 lib = CDLL("./build/libpamc204.so")
@@ -65,37 +66,48 @@ lib.pamc204_abort_motion.argtype = c_int
 # テスト対象アドレス
 address = 1  # E01
 
-# 呼び出し例をリスト化（send_command を最初に追加）
+# 呼び出し例をリスト化（BUSYエラーを避けるため、モーション完了を待つ）
 tests = [
-    ("send_command_E01INF", lambda: lib.pamc204_send_command(b"E01INF")),
-    ("send_command_E01", lambda: lib.pamc204_send_command(b"E01")),
-    ("set_address", lambda: lib.pamc204_set_address(1)),  # E01
-    ("set_voltage_150V", lambda: lib.pamc204_set_voltage(address, 4095)),
-    ("set_voltage_110V", lambda: lib.pamc204_set_voltage(address, 3000)),
-    ("set_voltage_70V", lambda: lib.pamc204_set_voltage(address, 1900)),
-    ("rotate_positive_1500Hz_1500pulses", lambda: lib.pamc204_rotate_positive(address, 1500, 1500, b"A")),
-    ("rotate_positive_ex_1500Hz_100000pulses", lambda: lib.pamc204_rotate_positive_ex(address, 1500, 100000, b"A")),
-    ("rotate_positive_continuous", lambda: lib.pamc204_rotate_positive(address, 1500, 0, b"A")),
-    ("rotate_negative_1500Hz_1500pulses", lambda: lib.pamc204_rotate_negative(address, 1500, 1500, b"A")),
-    ("rotate_negative_ex_1500Hz_100000pulses", lambda: lib.pamc204_rotate_negative_ex(address, 1500, 100000, b"A")),
-    ("rotate_negative_continuous", lambda: lib.pamc204_rotate_negative(address, 1500, 0, b"A")),
-    ("stop", lambda: lib.pamc204_stop(address)),
-    ("set_acceleration_10000", lambda: lib.pamc204_set_acceleration(address, 1, 10000)),
-    ("query_acceleration", lambda: lib.pamc204_query_acceleration(address, 1)),
-    ("set_velocity_1500", lambda: lib.pamc204_set_velocity(address, 1, 1500)),
-    ("move_absolute_10000", lambda: lib.pamc204_move_absolute(address, 1, 10000)),
-    ("move_relative_5000", lambda: lib.pamc204_move_relative(address, 1, 5000)),
-    ("query_actual_position", lambda: lib.pamc204_query_actual_position(address, 1)),
-    ("move_infinite_positive", lambda: lib.pamc204_move_infinite(address, 1, b"+")),
-    ("stop_motion", lambda: lib.pamc204_stop_motion(address, 1)),
-    ("abort_motion", lambda: lib.pamc204_abort_motion(address)),
+    ("send_command_E01INF", lambda: lib.pamc204_send_command(b"E01INF"), 0),
+    ("send_command_E01", lambda: lib.pamc204_send_command(b"E01"), 0),
+    ("set_address", lambda: lib.pamc204_set_address(1), 0),  # E01
+    ("set_voltage_150V", lambda: lib.pamc204_set_voltage(address, 4095), 0),
+    ("set_voltage_110V", lambda: lib.pamc204_set_voltage(address, 3000), 0),
+    ("set_voltage_70V", lambda: lib.pamc204_set_voltage(address, 1900), 0),
+    
+    # パルス駆動テスト（短いパルス数で完了を待つ）
+    ("rotate_positive_100pulses", lambda: lib.pamc204_rotate_positive(address, 1500, 100, b"A"), 0.5),
+    ("rotate_negative_100pulses", lambda: lib.pamc204_rotate_negative(address, 1500, 100, b"A"), 0.5),
+    
+    # 加速度・速度設定テスト（NPコマンド）
+    ("set_acceleration_10000", lambda: lib.pamc204_set_acceleration(address, 1, 10000), 0),
+    ("query_acceleration", lambda: lib.pamc204_query_acceleration(address, 1), 0),
+    ("set_velocity_1500", lambda: lib.pamc204_set_velocity(address, 1, 1500), 0),
+    
+    # 位置制御テスト（NPコマンド、加速度対応）
+    ("move_absolute_1000", lambda: lib.pamc204_move_absolute(address, 1, 1000), 1.0),
+    ("query_actual_position", lambda: lib.pamc204_query_actual_position(address, 1), 0),
+    ("move_relative_500", lambda: lib.pamc204_move_relative(address, 1, 500), 1.0),
+    ("query_actual_position_2", lambda: lib.pamc204_query_actual_position(address, 1), 0),
+    
+    # 無限移動と停止テスト（加速度対応）
+    ("move_infinite_positive", lambda: lib.pamc204_move_infinite(address, 1, b"+"), 0.5),
+    ("stop_motion", lambda: lib.pamc204_stop_motion(address, 1), 0.5),
+    
+    # 最終確認
+    ("query_actual_position_final", lambda: lib.pamc204_query_actual_position(address, 1), 0),
 ]
 
 # 順に試す
-for name, func in tests:
+for name, func, wait_time in tests:
     print(f"\n- Testing {name}...")
     ok = func()
     if ok:
         print(f"  {name} succeeded")
     else:
         print(f"  {name} failed")
+    
+    # 次のコマンドの前に待機（モーション完了やコマンド処理を待つ）
+    if wait_time > 0:
+        print(f"  Waiting {wait_time}s for motion to complete...")
+        time.sleep(wait_time)
