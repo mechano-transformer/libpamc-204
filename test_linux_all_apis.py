@@ -35,6 +35,33 @@ lib.pamc204_rotate_negative_ex.argtypes = [c_int, c_int, c_int, c_char]
 lib.pamc204_stop.restype = c_bool
 lib.pamc204_stop.argtype = c_int
 
+lib.pamc204_set_acceleration.restype = c_bool
+lib.pamc204_set_acceleration.argtypes = [c_int, c_int, c_int]
+
+lib.pamc204_query_acceleration.restype = c_bool
+lib.pamc204_query_acceleration.argtypes = [c_int, c_int]
+
+lib.pamc204_set_velocity.restype = c_bool
+lib.pamc204_set_velocity.argtypes = [c_int, c_int, c_int]
+
+lib.pamc204_move_absolute.restype = c_bool
+lib.pamc204_move_absolute.argtypes = [c_int, c_int, c_int]
+
+lib.pamc204_move_relative.restype = c_bool
+lib.pamc204_move_relative.argtypes = [c_int, c_int, c_int]
+
+lib.pamc204_query_actual_position.restype = c_bool
+lib.pamc204_query_actual_position.argtypes = [c_int, c_int]
+
+lib.pamc204_move_infinite.restype = c_bool
+lib.pamc204_move_infinite.argtypes = [c_int, c_int, c_char]
+
+lib.pamc204_stop_motion.restype = c_bool
+lib.pamc204_stop_motion.argtypes = [c_int, c_int]
+
+lib.pamc204_abort_motion.restype = c_bool
+lib.pamc204_abort_motion.argtype = c_int
+
 # テスト対象アドレス
 address = 1  # E01
 
@@ -53,6 +80,15 @@ tests = [
     ("rotate_negative_ex_1500Hz_100000pulses", lambda: lib.pamc204_rotate_negative_ex(address, 1500, 100000, b"A")),
     ("rotate_negative_continuous", lambda: lib.pamc204_rotate_negative(address, 1500, 0, b"A")),
     ("stop", lambda: lib.pamc204_stop(address)),
+    ("set_acceleration_10000", lambda: lib.pamc204_set_acceleration(address, 1, 10000)),
+    ("query_acceleration", lambda: lib.pamc204_query_acceleration(address, 1)),
+    ("set_velocity_1500", lambda: lib.pamc204_set_velocity(address, 1, 1500)),
+    ("move_absolute_10000", lambda: lib.pamc204_move_absolute(address, 1, 10000)),
+    ("move_relative_5000", lambda: lib.pamc204_move_relative(address, 1, 5000)),
+    ("query_actual_position", lambda: lib.pamc204_query_actual_position(address, 1)),
+    ("move_infinite_positive", lambda: lib.pamc204_move_infinite(address, 1, b"+")),
+    ("stop_motion", lambda: lib.pamc204_stop_motion(address, 1)),
+    ("abort_motion", lambda: lib.pamc204_abort_motion(address)),
 ]
 
 # 順に試す

@@ -4,6 +4,8 @@
 
 > **Disclaimer:** This document provides a command compatibility reference between PAMC204 and Newport Model8742. While the commands are designed to be compatible, **100% compatibility cannot be guaranteed** due to differences in hardware implementation, firmware behavior, and device-specific features. Users should thoroughly test all commands in their specific application environment before deployment.
 
+> **Version Information:** This document corresponds to PAMC204 F/W Ver.0.2.1 and later.
+
 ### Basic Concept Correspondence
 
 - **Frequency (PAMC204) [pulses/sec] = Velocity (Model8742) [steps/sec]**
@@ -21,20 +23,21 @@
 | **6. Reverse Rotation Drive** | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `xxPA nn`<br>`xxPR nn`<br>`xxMV-` | Same as above (reverse direction) |
 | **7. Stop** | `ExxS` | `xxST`<br>`AB` | PAMC204: Stops continuous drive, response=`ExxFINnnnn`(displays driven pulse count)<br>Model8742: ST=decelerated stop, AB=immediate stop |
 | **8. Motion Stop** | `ExxAB` | `AB` | PAMC204: Immediate stop all CH<br>Model8742: Immediate stop all axes |
-| **9. Velocity Setting** | `ExxmVAnnnn` | `xxVA nn` | PAMC204: 1-1500 steps/sec, m=1-4 (CH specification)<br>Model8742: 1-2000 steps/sec |
-| **10. Velocity Query** | `ExxmVA?` | `xxVA?` | PAMC204: m=1-4 (CH specification) |
-| **11. Home Position Setting** | `ExxmDHnnnn` | `xxDH nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647<br>Model8742: Absolute position setting |
-| **12. Home Position Query** | `ExxmDH?` | `xxDH?` | PAMC204: m=1-4 (CH specification) |
-| **13. Absolute Position Move** | `ExxmPAnnnn` | `xxPA nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647 |
-| **14. Absolute Position Query** | `ExxmPA?` | `xxPA?` | PAMC204: m=1-4 (CH specification), returns target position when moving, actual position when stopped |
-| **15. Relative Position Move** | `ExxmPRnnnn` | `xxPR nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647 |
-| **16. Relative Position Query** | `ExxmPR?` | `xxPR?` | PAMC204: m=1-4 (CH specification), returns target position when moving, actual position when stopped |
-| **17. Actual Position Query** | `ExxmTP?` | `xxTP?` | PAMC204: m=1-4 (CH specification), returns current actual position |
-| **18. Motion Status Check** | `ExxmMD?` | `xxMD?` | PAMC204: m=1-4 (CH specification), 0=moving, 1=stopped<br>Model8742: 0=moving, 1=stopped |
-| **19. Infinite Move** | `ExxmMVn` | `xxMV+/-` | PAMC204: m=1-4 (CH specification), n=+/- (direction specification) |
-| **20. Move Direction Query** | `ExxmMV?` | - | PAMC204-specific, m=1-4 (CH specification), 0=moving, 1=stopped |
-| **21. Motion Stop** | `ExxmST` | `xxST` | PAMC204: m=1-4 (CH specification), decelerated stop<br>Model8742: Decelerated stop |
-| **Acceleration Setting** | - | `xxAC nn` | Model8742-specific: 1-200000 steps/sec² |
+| **9. Acceleration Setting** | `ExxmACnnnn` | `xxAC nn` | PAMC204: 1-150000 steps/sec², m=1-4 (CH specification)<br>Model8742: 1-200000 steps/sec²<br>**F/W Ver.0.2.1 and later** |
+| **10. Acceleration Query** | `ExxmAC?` | `xxAC?` | PAMC204: m=1-4 (CH specification)<br>**F/W Ver.0.2.1 and later** |
+| **11. Velocity Setting** | `ExxmVAnnnn` | `xxVA nn` | PAMC204: 1-1500 steps/sec, m=1-4 (CH specification)<br>Model8742: 1-2000 steps/sec |
+| **12. Velocity Query** | `ExxmVA?` | `xxVA?` | PAMC204: m=1-4 (CH specification) |
+| **13. Home Position Setting** | `ExxmDHnnnn` | `xxDH nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647<br>Model8742: Absolute position setting |
+| **14. Home Position Query** | `ExxmDH?` | `xxDH?` | PAMC204: m=1-4 (CH specification) |
+| **15. Absolute Position Move** | `ExxmPAnnnn` | `xxPA nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647<br>**Acceleration support in F/W Ver.0.2.1 and later** |
+| **16. Absolute Position Query** | `ExxmPA?` | `xxPA?` | PAMC204: m=1-4 (CH specification), returns target position when moving, actual position when stopped |
+| **17. Relative Position Move** | `ExxmPRnnnn` | `xxPR nn` | PAMC204: m=1-4 (CH specification), nnnn=-2147483648~+2147483647<br>**Acceleration support in F/W Ver.0.2.1 and later** |
+| **18. Relative Position Query** | `ExxmPR?` | `xxPR?` | PAMC204: m=1-4 (CH specification), returns target position when moving, actual position when stopped |
+| **19. Actual Position Query** | `ExxmTP?` | `xxTP?` | PAMC204: m=1-4 (CH specification), returns current actual position |
+| **20. Motion Status Check** | `ExxmMD?` | `xxMD?` | PAMC204: m=1-4 (CH specification), 0=moving, 1=stopped<br>Model8742: 0=moving, 1=stopped |
+| **21. Infinite Move** | `ExxmMVn` | `xxMV+/-` | PAMC204: m=1-4 (CH specification), n=+/- (direction specification)<br>**Acceleration support in F/W Ver.0.2.1 and later** |
+| **22. Move Direction Query** | `ExxmMV?` | - | PAMC204-specific, m=1-4 (CH specification), 0=moving, 1=stopped |
+| **23. Motion Stop** | `ExxmST` | `xxST` | PAMC204: m=1-4 (CH specification), decelerated stop<br>Model8742: Decelerated stop<br>**Acceleration support in F/W Ver.0.2.1 and later** |
 | **Motor Type Setting** | - | `xxQM nn` | Model8742-specific feature |
 
 ### Parameter Details Comparison
@@ -50,6 +53,7 @@
 | `yyyyyy` | 000001-999999 | Extended pulse count (with X) |
 | `z` | A-D | Drive axis (A=CH1, B=CH2, C=CH3, D=CH4) |
 | `nnnn` (DAC) | 1900-4095 | Output voltage setting value |
+| `nnnn` (acceleration) | 1-150000 | Acceleration (steps/sec²) **F/W Ver.0.2.1 and later** |
 | `nnnn` (position) | -2147483648 ~ +2147483647 | Absolute/Relative position |
 | `n` (direction) | +/- | Move direction (+: forward, -: reverse) |
 
@@ -62,6 +66,15 @@
 | `nn` (AC) | 1-200000 | Acceleration (steps/sec²) |
 | `nn` (PA/PR) | -2147483648 ~ +2147483647 | Position (step count) |
 | `nn` (QM) | 0-3 | Motor type |
+
+### Acceleration Support Differences (F/W Ver.0.2.1 and later)
+
+| Item | PAMC204 | Model8742 |
+|------|---------|-----------|
+| **Acceleration Range** | 1-150000 steps/sec² | 1-200000 steps/sec² |
+| **Default Value** | 100000 steps/sec² | 100000 steps/sec² |
+| **Supported Commands** | MV, PA, PR, ST | MV, PA, PR, ST |
+| **Unsupported Commands** | NR, RR, S (MC commands) | - |
 
 ### Output Voltage Correspondence Table (PAMC204 only)
 

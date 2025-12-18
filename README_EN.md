@@ -89,6 +89,8 @@ pamc204::check_device(1);                   // E01
 pamc204::set_voltage(1, 4095);              // E01DAC4095 (150V)
 pamc204::rotate_positive(1, 1500, 1000, 'A'); // E01NR15001000A
 pamc204::stop(1);                           // E01S
+pamc204::set_acceleration(1, 1, 10000);     // E011AC10000 (Set CH1 acceleration to 10000)
+pamc204::query_acceleration(1, 1);          // E011AC? (Query CH1 acceleration)
 pamc204::set_velocity(1, 1, 1500);          // E011VA1500 (Set CH1 velocity to 1500)
 pamc204::move_absolute(1, 1, 10000);        // E011PA10000 (Move CH1 to absolute position 10000)
 pamc204::move_relative(1, 1, 5000);         // E011PR5000 (Move CH1 relative +5000)
@@ -101,6 +103,8 @@ pamc204::abort_motion(1);                   // E01AB (Immediate stop all CH)
 pamc204_get_firmware_version(1);
 pamc204_rotate_positive(1, 1500, 1000, 'A');
 pamc204_stop(1);
+pamc204_set_acceleration(1, 1, 10000);
+pamc204_query_acceleration(1, 1);
 pamc204_set_velocity(1, 1, 1500);
 pamc204_move_absolute(1, 1, 10000);
 pamc204_query_actual_position(1, 1);
@@ -142,19 +146,21 @@ Available commands for PAMC-204:
 | 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | Reverse rotation drive command (pulse drive) |
 | 7 | `ExxS` | Stop command (pulse drive) |
 | 8 | `ExxAB` | Motion stop (immediate stop all CH) |
-| 9 | `ExxmVAnnnn` | Velocity setting |
-| 10 | `ExxmVA?` | Velocity query |
-| 11 | `ExxmDHnnnn` | Home position setting |
-| 12 | `ExxmDH?` | Home position query |
-| 13 | `ExxmPAnnnn` | Absolute position move |
-| 14 | `ExxmPA?` | Absolute position query |
-| 15 | `ExxmPRnnnn` | Relative position move |
-| 16 | `ExxmPR?` | Relative position query |
-| 17 | `ExxmTP?` | Actual position query |
-| 18 | `ExxmMD?` | Motion status check |
-| 19 | `ExxmMVn` | Infinite move |
-| 20 | `ExxmMV?` | Move direction query |
-| 21 | `ExxmST` | Motion stop |
+| 9 | `ExxmACnnnn` | Acceleration setting |
+| 10 | `ExxmAC?` | Acceleration query |
+| 11 | `ExxmVAnnnn` | Velocity setting |
+| 12 | `ExxmVA?` | Velocity query |
+| 13 | `ExxmDHnnnn` | Home position setting |
+| 14 | `ExxmDH?` | Home position query |
+| 15 | `ExxmPAnnnn` | Absolute position move |
+| 16 | `ExxmPA?` | Absolute position query |
+| 17 | `ExxmPRnnnn` | Relative position move |
+| 18 | `ExxmPR?` | Relative position query |
+| 19 | `ExxmTP?` | Actual position query |
+| 20 | `ExxmMD?` | Motion status check |
+| 21 | `ExxmMVn` | Infinite move |
+| 22 | `ExxmMV?` | Move direction query |
+| 23 | `ExxmST` | Motion stop |
 
 ### 📋 API Usage Examples
 
@@ -175,6 +181,8 @@ Usage examples based on PAMC-204 command specifications:
 | | `send_command("E01RR1500X100000B")` | Rotate E01 CH2 reverse at 1500Hz for 100000 pulses |
 | **Reverse Rotation (Continuous)** | `send_command("E01RR15000000C")` | Continuously rotate E01 CH3 reverse at 1500Hz |
 | **Stop** | `send_command("E01S")` | Stop continuous drive of E01 |
+| **Acceleration Setting** | `send_command("E011AC10000")` | Set E01 CH1 acceleration to 10000 steps/sec² |
+| **Acceleration Query** | `send_command("E011AC?")` | Query E01 CH1 acceleration |
 | **Velocity Setting** | `send_command("E011VA1500")` | Set E01 CH1 velocity to 1500 steps/sec |
 | **Absolute Position Move** | `send_command("E011PA10000")` | Move E01 CH1 to absolute position 10000 |
 | **Relative Position Move** | `send_command("E011PR5000")` | Move E01 CH1 +5000 from current position |
@@ -199,6 +207,7 @@ Usage examples based on PAMC-204 command specifications:
 
 - **Address**: `xx` = 01～32
 - **Channel**: `m` = 1～4
+- **Acceleration**: `nnnn` = 1～150000 steps/sec²
 - **Velocity**: `nnnn` = 1～1500 steps/sec
 - **Position**: `nnnn` = -2147483648～+2147483647
 - **Direction**: `n` = + (forward) or - (reverse)

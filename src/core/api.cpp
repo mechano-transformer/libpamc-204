@@ -79,6 +79,20 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    bool set_acceleration(int address, int channel, int acceleration)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dAC%d", address, channel, acceleration);
+        return send_command(cmd);
+    }
+
+    bool query_acceleration(int address, int channel)
+    {
+        char cmd[32];
+        std::snprintf(cmd, sizeof(cmd), "E%02d%dAC?", address, channel);
+        return send_command(cmd);
+    }
+
     bool set_velocity(int address, int channel, int velocity)
     {
         char cmd[32];
@@ -235,6 +249,16 @@ extern "C"
     bool pamc204_abort_motion(int address)
     {
         return pamc204::abort_motion(address);
+    }
+
+    bool pamc204_set_acceleration(int address, int channel, int acceleration)
+    {
+        return pamc204::set_acceleration(address, channel, acceleration);
+    }
+
+    bool pamc204_query_acceleration(int address, int channel)
+    {
+        return pamc204::query_acceleration(address, channel);
     }
 
     bool pamc204_set_velocity(int address, int channel, int velocity)

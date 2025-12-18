@@ -89,6 +89,8 @@ pamc204::check_device(1);                   // E01
 pamc204::set_voltage(1, 4095);              // E01DAC4095 (150V)
 pamc204::rotate_positive(1, 1500, 1000, 'A'); // E01NR15001000A
 pamc204::stop(1);                           // E01S
+pamc204::set_acceleration(1, 1, 10000);     // E011AC10000 (CH1の加速度を10000に設定)
+pamc204::query_acceleration(1, 1);          // E011AC? (CH1の加速度問い合わせ)
 pamc204::set_velocity(1, 1, 1500);          // E011VA1500 (CH1の速度を1500に設定)
 pamc204::move_absolute(1, 1, 10000);        // E011PA10000 (CH1を絶対位置10000に移動)
 pamc204::move_relative(1, 1, 5000);         // E011PR5000 (CH1を相対位置+5000移動)
@@ -101,6 +103,8 @@ pamc204::abort_motion(1);                   // E01AB (全CH即停止)
 pamc204_get_firmware_version(1);
 pamc204_rotate_positive(1, 1500, 1000, 'A');
 pamc204_stop(1);
+pamc204_set_acceleration(1, 1, 10000);
+pamc204_query_acceleration(1, 1);
 pamc204_set_velocity(1, 1, 1500);
 pamc204_move_absolute(1, 1, 10000);
 pamc204_query_actual_position(1, 1);
@@ -142,19 +146,21 @@ PAMC-204で使用可能なコマンド一覧：
 | 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | 逆回転駆動コマンド（パルス駆動） |
 | 7 | `ExxS` | 停止コマンド（パルス駆動） |
 | 8 | `ExxAB` | モーション停止（全CH即停止） |
-| 9 | `ExxmVAnnnn` | 速度設定 |
-| 10 | `ExxmVA?` | 速度問い合わせ |
-| 11 | `ExxmDHnnnn` | ホームポジション設定 |
-| 12 | `ExxmDH?` | ホームポジション問い合わせ |
-| 13 | `ExxmPAnnnn` | 絶対位置移動 |
-| 14 | `ExxmPA?` | 絶対位置問い合わせ |
-| 15 | `ExxmPRnnnn` | 相対位置移動 |
-| 16 | `ExxmPR?` | 相対位置問い合わせ |
-| 17 | `ExxmTP?` | 実位置問い合わせ |
-| 18 | `ExxmMD?` | 動作状態確認 |
-| 19 | `ExxmMVn` | 無限移動 |
-| 20 | `ExxmMV?` | 移動方向問い合わせ |
-| 21 | `ExxmST` | 動作停止 |
+| 9 | `ExxmACnnnn` | 加速度設定 |
+| 10 | `ExxmAC?` | 加速度問い合わせ |
+| 11 | `ExxmVAnnnn` | 速度設定 |
+| 12 | `ExxmVA?` | 速度問い合わせ |
+| 13 | `ExxmDHnnnn` | ホームポジション設定 |
+| 14 | `ExxmDH?` | ホームポジション問い合わせ |
+| 15 | `ExxmPAnnnn` | 絶対位置移動 |
+| 16 | `ExxmPA?` | 絶対位置問い合わせ |
+| 17 | `ExxmPRnnnn` | 相対位置移動 |
+| 18 | `ExxmPR?` | 相対位置問い合わせ |
+| 19 | `ExxmTP?` | 実位置問い合わせ |
+| 20 | `ExxmMD?` | 動作状態確認 |
+| 21 | `ExxmMVn` | 無限移動 |
+| 22 | `ExxmMV?` | 移動方向問い合わせ |
+| 23 | `ExxmST` | 動作停止 |
 
 ### 📋 API使用例
 
@@ -175,6 +181,8 @@ PAMC-204のコマンド仕様に基づく使用例：
 | | `send_command("E01RR1500X100000B")` | E01のCH2を1500Hzで100000パルス逆回転 |
 | **逆回転駆動（連続）** | `send_command("E01RR15000000C")` | E01のCH3を1500Hzで連続逆回転 |
 | **停止** | `send_command("E01S")` | E01の連続駆動を停止 |
+| **加速度設定** | `send_command("E011AC10000")` | E01のCH1の加速度を10000 steps/sec²に設定 |
+| **加速度問い合わせ** | `send_command("E011AC?")` | E01のCH1の加速度を問い合わせ |
 | **速度設定** | `send_command("E011VA1500")` | E01のCH1の速度を1500 steps/secに設定 |
 | **絶対位置移動** | `send_command("E011PA10000")` | E01のCH1を絶対位置10000に移動 |
 | **相対位置移動** | `send_command("E011PR5000")` | E01のCH1を現在位置から+5000移動 |
@@ -199,6 +207,7 @@ PAMC-204のコマンド仕様に基づく使用例：
 
 - **アドレス**: `xx` = 01～32
 - **チャンネル**: `m` = 1～4
+- **加速度**: `nnnn` = 1～150000 steps/sec²
 - **速度**: `nnnn` = 1～1500 steps/sec
 - **位置**: `nnnn` = -2147483648～+2147483647
 - **方向**: `n` = +（正方向）または -（負方向）
