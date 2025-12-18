@@ -1,4 +1,4 @@
-﻿# libpamc-204
+# libpamc-204
 
 クロスプラットフォーム対応のPAMC204制御用ライブラリです。  
 Windows では DLL、Linux/WSL2 では SO としてビルドできます。  
@@ -43,7 +43,7 @@ libpamc-204/
 cd libpamc-204
 mkdir build -p && cd build
 cmake ..
-make
+cmake --build .
 ```
 
 生成物:
