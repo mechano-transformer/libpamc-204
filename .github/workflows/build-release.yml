@@ -35,9 +35,9 @@ jobs:
         with:
           name: ${{ matrix.os }}-artifacts
           path: |
-            build/*.so
-            build/*.dll
-            build/test_serial
+            build/**/*.so
+            build/**/*.dll
+            build/**/test_serial*
           if-no-files-found: ignore
 
   release:
