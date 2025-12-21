@@ -37,7 +37,6 @@ jobs:
           path: |
             build/**/*.so
             build/**/*.dll
-            build/**/test_serial*
           if-no-files-found: ignore
 
   release:
