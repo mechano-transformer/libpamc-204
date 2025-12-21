@@ -305,7 +305,23 @@ static std::string detect_port_name(const std::string &vid = "0403", const std::
 を使用している
 
 ### Guthub Actionsによる自動ビルド && リリース
+#### 基本手順: タグをつけてpushすればGithub Actionが回る
 ```bash
 git tag v1.0.0
+git push origin v1.0.0
+```
+
+#### tagのpushをやり直したいとき
+```bash
+# （既につけた）リモートのタグ付けを削除
+git push origin :refs/tags/v1.0.0
+
+# ローカルのタグも削除
+git tag -d v1.0.0
+
+# 再度同名のタグを作成
+git tag v1.0.0
+
+# タグをpush
 git push origin v1.0.0
 ```
