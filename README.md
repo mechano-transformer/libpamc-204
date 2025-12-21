@@ -303,3 +303,9 @@ static std::string detect_port_name(const std::string &vid = "0403", const std::
 ```
 
 を使用している
+
+### Guthub Actionsによる自動ビルド && リリース
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
