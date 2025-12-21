@@ -35,9 +35,9 @@ jobs:
         with:
           name: ${{ matrix.os }}-artifacts
           path: |
+            build/libpamc204.so
             build/**/pamc204.dll
-            build/**/libpamc204.so
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   release:
     needs: build
