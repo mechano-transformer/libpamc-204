@@ -217,6 +217,23 @@ namespace pamc204
      * @note 各チャンネルに対してExxmMD?コマンドを順次実行
      */
     bool query_motion_status_all_channels(int address, int statuses[4]);
+
+    /**
+     * @brief 4チャンネル同時無限移動
+     * @param address ドライバアドレス（1-32）
+     * @param direction 移動方向（'+' または '-'）
+     * @return 成功時 true、失敗時 false
+     * @note 全チャンネルに対して同じ方向でExxmMVnコマンドを順次実行
+     */
+    bool move_infinite_all_channels(int address, char direction);
+
+    /**
+     * @brief 4チャンネル同時動作停止
+     * @param address ドライバアドレス（1-32）
+     * @return 成功時 true、失敗時 false
+     * @note 全チャンネルに対してExxmSTコマンドを順次実行
+     */
+    bool stop_motion_all_channels(int address);
 }
 
 // ============================================================================
@@ -262,6 +279,8 @@ extern "C"
     bool pamc204_move_relative_all_channels(int address, int position);
     bool pamc204_query_actual_position_all_channels(int address, int positions[4]);
     bool pamc204_query_motion_status_all_channels(int address, int statuses[4]);
+    bool pamc204_move_infinite_all_channels(int address, char direction);
+    bool pamc204_stop_motion_all_channels(int address);
 
 #ifdef __cplusplus
 }

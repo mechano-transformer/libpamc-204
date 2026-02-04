@@ -41,6 +41,8 @@
 | **24. 4CH Simultaneous Relative Move** | `move_relative_all_channels(addr, pos)` | - | PAMC204 DLL-level extension<br>Move all channels by the same distance |
 | **25. 4CH Simultaneous Actual Position Query** | `query_actual_position_all_channels(addr, pos[4])` | - | PAMC204 DLL-level extension<br>Query actual positions of 4 channels at once |
 | **26. 4CH Simultaneous Status Query** | `query_motion_status_all_channels(addr, stat[4])` | - | PAMC204 DLL-level extension<br>Query status of 4 channels at once |
+| **27. 4CH Simultaneous Infinite Move** | `move_infinite_all_channels(addr, dir)` | - | PAMC204 DLL-level extension<br>Move all channels infinitely in the same direction |
+| **28. 4CH Simultaneous Stop** | `stop_motion_all_channels(addr)` | - | PAMC204 DLL-level extension<br>Stop motion of all channels |
 | **Motor Type Setting** | - | `xxQM nn` | Model8742-specific feature |
 
 ### Parameter Details Comparison

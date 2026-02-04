@@ -41,6 +41,8 @@
 | **24. 4CH同時相対移動** | `move_relative_all_channels(addr, pos)` | - | PAMC204 DLLレベル拡張<br>全チャンネルを同じ距離だけ相対移動 |
 | **25. 4CH同時実位置取得** | `query_actual_position_all_channels(addr, pos[4])` | - | PAMC204 DLLレベル拡張<br>4チャンネルの実位置を一度に取得 |
 | **26. 4CH同時状態取得** | `query_motion_status_all_channels(addr, stat[4])` | - | PAMC204 DLLレベル拡張<br>4チャンネルの状態を一度に取得 |
+| **27. 4CH同時無限移動** | `move_infinite_all_channels(addr, dir)` | - | PAMC204 DLLレベル拡張<br>全チャンネルを同じ方向に無限移動 |
+| **28. 4CH同時動作停止** | `stop_motion_all_channels(addr)` | - | PAMC204 DLLレベル拡張<br>全チャンネルの動作を停止 |
 | **モータータイプ設定** | - | `xxQM nn` | Model8742固有機能 |
 
 ### パラメータ詳細対比

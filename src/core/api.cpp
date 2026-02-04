@@ -231,6 +231,32 @@ namespace pamc204
         return true;
     }
 
+    bool move_infinite_all_channels(int address, char direction)
+    {
+        // 全チャンネルを同じ方向に無限移動
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!move_infinite(address, ch, direction))
+            {
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
+    bool stop_motion_all_channels(int address)
+    {
+        // 全チャンネルの動作を停止
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!stop_motion(address, ch))
+            {
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
 } // namespace pamc204
 
 // ============================================================================
@@ -387,6 +413,16 @@ extern "C"
     bool pamc204_query_motion_status_all_channels(int address, int statuses[4])
     {
         return pamc204::query_motion_status_all_channels(address, statuses);
+    }
+
+    bool pamc204_move_infinite_all_channels(int address, char direction)
+    {
+        return pamc204::move_infinite_all_channels(address, direction);
+    }
+
+    bool pamc204_stop_motion_all_channels(int address)
+    {
+        return pamc204::stop_motion_all_channels(address);
     }
 
 } // extern "C"
