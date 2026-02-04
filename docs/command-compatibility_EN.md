@@ -262,14 +262,6 @@ These APIs are implemented at the DLL level as follows:
 2. **Actual Position Query**: Send `ExxmTP?` command sequentially to each axis
 3. **Status Query**: Send `ExxmMD?` command sequentially to each axis
 
-### Requirements Correspondence
-
-This implementation satisfies the following requirements:
-
-- ✅ **Requirement 6**: Set relative move amounts for 4 axes with one function call (no move if 0)
-- ✅ **Requirement 7**: Query absolute positions of 4 axes with one function call
-- ✅ **Requirement 8**: Query status (moving/stopped) of 4 axes with one function call
-
 ### Notes
 
 - These are DLL-level wrapper functions, not hardware-level simultaneous operations
