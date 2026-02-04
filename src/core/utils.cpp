@@ -20,7 +20,7 @@ static const std::map<std::string, std::string> error_descriptions = {
     {"ERROR4", "6桁パルス数が範囲外です（1～999999）"},
     {"ERROR5", "4桁パルス数が範囲外です（1～9999）"},
     {"BUSY", "ドライバが駆動中です。停止後に再送信してください"},
-    {"ERROR", "回転方向、周波数、チャンネル指定が不正、またはコマンド認識不可"}};
+    {"ERROR", "回転方向、周波数、軸指定が不正、またはコマンド認識不可"}};
 
 std::string find_error_token(const std::string &resp)
 {

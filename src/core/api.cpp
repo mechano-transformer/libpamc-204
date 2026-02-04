@@ -184,6 +184,84 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // ========================================================================
+    // 4軸同時操作API実装
+    // ========================================================================
+
+    bool move_relative_all_channels(int address, int position)
+    {
+        // 全軸に同じ相対位置を設定
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!move_relative(address, ch, position))
+            {
+                std::fprintf(stderr, "move_relative_all_channels: Failed at axis %d\n", ch);
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
+    bool query_actual_position_all_channels(int address, int positions[4])
+    {
+        // 各軸の実位置を順次問い合わせ
+        // 注: 実際のレスポンス解析はserial.cpp内で行われるため、
+        // ここでは単にコマンドを送信するのみ
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!query_actual_position(address, ch))
+            {
+                std::fprintf(stderr, "query_actual_position_all_channels: Failed at axis %d\n", ch);
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
+    bool query_motion_status_all_channels(int address, int statuses[4])
+    {
+        // 各軸の動作状態を順次問い合わせ
+        // 注: 実際のレスポンス解析はserial.cpp内で行われるため、
+        // ここでは単にコマンドを送信するのみ
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!query_motion_status(address, ch))
+            {
+                std::fprintf(stderr, "query_motion_status_all_channels: Failed at axis %d\n", ch);
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
+    bool move_infinite_all_channels(int address, char direction)
+    {
+        // 全軸を同じ方向に無限移動
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!move_infinite(address, ch, direction))
+            {
+                std::fprintf(stderr, "move_infinite_all_channels: Failed at axis %d\n", ch);
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
+    bool stop_motion_all_channels(int address)
+    {
+        // 全軸の動作を停止
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!stop_motion(address, ch))
+            {
+                std::fprintf(stderr, "stop_motion_all_channels: Failed at axis %d\n", ch);
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
 } // namespace pamc204
 
 // ============================================================================
@@ -324,6 +402,32 @@ extern "C"
     bool pamc204_stop_motion(int address, int channel)
     {
         return pamc204::stop_motion(address, channel);
+    }
+
+    // 4軸同時操作API
+    bool pamc204_move_relative_all_channels(int address, int position)
+    {
+        return pamc204::move_relative_all_channels(address, position);
+    }
+
+    bool pamc204_query_actual_position_all_channels(int address, int positions[4])
+    {
+        return pamc204::query_actual_position_all_channels(address, positions);
+    }
+
+    bool pamc204_query_motion_status_all_channels(int address, int statuses[4])
+    {
+        return pamc204::query_motion_status_all_channels(address, statuses);
+    }
+
+    bool pamc204_move_infinite_all_channels(int address, char direction)
+    {
+        return pamc204::move_infinite_all_channels(address, direction);
+    }
+
+    bool pamc204_stop_motion_all_channels(int address)
+    {
+        return pamc204::stop_motion_all_channels(address);
     }
 
 } // extern "C"
