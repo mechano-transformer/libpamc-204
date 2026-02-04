@@ -45,7 +45,7 @@ namespace pamc204
      * @brief 正回転駆動（ExxNRnnnnyyyyz）
      * @param frequency 周波数（1-1500 Hz）
      * @param pulses パルス数（0=連続駆動, 1-9999）
-     * @param channel チャンネル（'A'=CH1, 'B'=CH2, 'C'=CH3, 'D'=CH4）
+     * @param channel 軸指定（'A'=Axis1, 'B'=Axis2, 'C'=Axis3, 'D'=Axis4）
      */
     bool rotate_positive(int address, int frequency, int pulses, char channel);
 
@@ -79,7 +79,7 @@ namespace pamc204
     /**
      * @brief 加速度設定（ExxmACnnnn）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      * @param acceleration 加速度（1-150000 steps/sec²）
      */
     bool set_acceleration(int address, int channel, int acceleration);
@@ -87,14 +87,14 @@ namespace pamc204
     /**
      * @brief 加速度問い合わせ（ExxmAC?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_acceleration(int address, int channel);
 
     /**
      * @brief 速度設定（ExxmVAnnnn）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      * @param velocity 速度（1-1500 steps/sec）
      */
     bool set_velocity(int address, int channel, int velocity);
@@ -102,14 +102,14 @@ namespace pamc204
     /**
      * @brief 速度問い合わせ（ExxmVA?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_velocity(int address, int channel);
 
     /**
      * @brief ホームポジション設定（ExxmDHnnnn）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      * @param position ホームポジション（-2147483648 ~ +2147483647）
      */
     bool set_home_position(int address, int channel, int position);
@@ -117,14 +117,14 @@ namespace pamc204
     /**
      * @brief ホームポジション問い合わせ（ExxmDH?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_home_position(int address, int channel);
 
     /**
      * @brief 絶対位置移動（ExxmPAnnnn）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      * @param position 絶対位置（-2147483648 ~ +2147483647）
      */
     bool move_absolute(int address, int channel, int position);
@@ -132,14 +132,14 @@ namespace pamc204
     /**
      * @brief 絶対位置問い合わせ（ExxmPA?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_absolute_position(int address, int channel);
 
     /**
      * @brief 相対位置移動（ExxmPRnnnn）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      * @param position 相対位置（-2147483648 ~ +2147483647）
      */
     bool move_relative(int address, int channel, int position);
@@ -147,28 +147,28 @@ namespace pamc204
     /**
      * @brief 相対位置問い合わせ（ExxmPR?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_relative_position(int address, int channel);
 
     /**
      * @brief 実位置問い合わせ（ExxmTP?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_actual_position(int address, int channel);
 
     /**
      * @brief 動作状態確認（ExxmMD?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_motion_status(int address, int channel);
 
     /**
      * @brief 無限移動（ExxmMVn）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      * @param direction 方向（'+' または '-'）
      */
     bool move_infinite(int address, int channel, char direction);
@@ -176,14 +176,14 @@ namespace pamc204
     /**
      * @brief 移動方向問い合わせ（ExxmMV?）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool query_move_direction(int address, int channel);
 
     /**
      * @brief 動作停止（ExxmST）
      * @param address ドライバアドレス（1-32）
-     * @param channel チャンネル（1-4）
+     * @param channel 軸番号（1-4）
      */
     bool stop_motion(int address, int channel);
 
@@ -275,7 +275,7 @@ extern "C"
     bool pamc204_query_move_direction(int address, int channel);
     bool pamc204_stop_motion(int address, int channel);
 
-    // 4チャンネル同時操作API
+    // 4軸同時操作API
     bool pamc204_move_relative_all_channels(int address, int position);
     bool pamc204_query_actual_position_all_channels(int address, int positions[4]);
     bool pamc204_query_motion_status_all_channels(int address, int statuses[4]);

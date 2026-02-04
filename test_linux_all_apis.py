@@ -63,7 +63,7 @@ lib.pamc204_stop_motion.argtypes = [c_int, c_int]
 lib.pamc204_abort_motion.restype = c_bool
 lib.pamc204_abort_motion.argtype = c_int
 
-# 4チャンネル同時操作API
+# 4軸同時操作API
 lib.pamc204_move_relative_all_channels.restype = c_bool
 lib.pamc204_move_relative_all_channels.argtypes = [c_int, c_int]
 
@@ -107,7 +107,7 @@ tests = [
     # 最終確認
     ("query_actual_position_final", lambda: lib.pamc204_query_actual_position(address, 1), 0),
     
-    # 4チャンネル同時操作APIテスト
+    # 4軸同時操作APIテスト
     ("move_relative_all_channels", lambda: lib.pamc204_move_relative_all_channels(address, 500), 2.0),
     
     ("query_actual_position_all_channels", lambda: (

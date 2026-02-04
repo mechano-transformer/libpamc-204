@@ -38,11 +38,11 @@
 | **21. Infinite Move** | `ExxmMVn` | `xxMV+/-` | PAMC204: m=1-4 (CH specification), n=+/- (direction specification)<br>**Acceleration support in F/W Ver.0.2.1 and later** |
 | **22. Move Direction Query** | `ExxmMV?` | - | PAMC204-specific, m=1-4 (CH specification), 0=moving, 1=stopped |
 | **23. Motion Stop** | `ExxmST` | `xxST` | PAMC204: m=1-4 (CH specification), decelerated stop<br>Model8742: Decelerated stop<br>**Acceleration support in F/W Ver.0.2.1 and later** |
-| **24. 4CH Simultaneous Relative Move** | `move_relative_all_channels(addr, pos)` | - | PAMC204 DLL-level extension<br>Move all channels by the same distance |
-| **25. 4CH Simultaneous Actual Position Query** | `query_actual_position_all_channels(addr, pos[4])` | - | PAMC204 DLL-level extension<br>Query actual positions of 4 channels at once |
-| **26. 4CH Simultaneous Status Query** | `query_motion_status_all_channels(addr, stat[4])` | - | PAMC204 DLL-level extension<br>Query status of 4 channels at once |
-| **27. 4CH Simultaneous Infinite Move** | `move_infinite_all_channels(addr, dir)` | - | PAMC204 DLL-level extension<br>Move all channels infinitely in the same direction |
-| **28. 4CH Simultaneous Stop** | `stop_motion_all_channels(addr)` | - | PAMC204 DLL-level extension<br>Stop motion of all channels |
+| **24. 4-axis Simultaneous Relative Move** | `move_relative_all_channels(addr, pos)` | - | PAMC204 DLL-level extension<br>Move all axes by the same distance |
+| **25. 4-axis Simultaneous Actual Position Query** | `query_actual_position_all_channels(addr, pos[4])` | - | PAMC204 DLL-level extension<br>Query actual positions of 4 axes at once |
+| **26. 4-axis Simultaneous Status Query** | `query_motion_status_all_channels(addr, stat[4])` | - | PAMC204 DLL-level extension<br>Query status of 4 axes at once |
+| **27. 4-axis Simultaneous Infinite Move** | `move_infinite_all_channels(addr, dir)` | - | PAMC204 DLL-level extension<br>Move all axes infinitely in the same direction |
+| **28. 4-axis Simultaneous Stop** | `stop_motion_all_channels(addr)` | - | PAMC204 DLL-level extension<br>Stop motion of all axes |
 | **Motor Type Setting** | - | `xxQM nn` | Model8742-specific feature |
 
 ### Parameter Details Comparison
@@ -223,3 +223,55 @@ AB     (immediate stop)
 5. **Simultaneous Drive Limitation**
    - PAMC204: Only 1 CH can be driven at a time per unit
    - Driving another CH automatically stops the currently running motor
+
+## 4-axis Simultaneous Operation API (DLL-level Extension)
+
+The PAMC204 library provides extended APIs for efficient multi-axis operations. These APIs are wrapper functions that internally execute existing single-axis commands sequentially.
+
+### Provided Features
+
+| Feature | API Function | Description |
+|---------|--------------|-------------|
+| **4-axis Simultaneous Relative Move** | `move_relative_all_channels(address, positions[4])` | Set relative positions for 4 axes at once<br>If positions[i]=0, that axis does not move |
+| **4-axis Simultaneous Actual Position Query** | `query_actual_position_all_channels(address, positions[4])` | Query actual positions of 4 axes at once |
+| **4-axis Simultaneous Status Query** | `query_motion_status_all_channels(address, statuses[4])` | Query motion status of 4 axes at once<br>0=moving, 1=stopped |
+
+### Usage Example
+
+```cpp
+#include "pamc204.h"
+
+// 4-axis simultaneous relative move
+int positions[4] = {1000, 0, -500, 2000};  // Axis1:+1000, Axis2:no move, Axis3:-500, Axis4:+2000
+pamc204::move_relative_all_channels(1, positions);
+
+// 4-axis simultaneous actual position query
+int actual_positions[4];
+pamc204::query_actual_position_all_channels(1, actual_positions);
+
+// 4-axis simultaneous status query
+int statuses[4];
+pamc204::query_motion_status_all_channels(1, statuses);
+```
+
+### Implementation Method
+
+These APIs are implemented at the DLL level as follows:
+
+1. **Relative Move**: Send `ExxmPRnnnn` command sequentially to each axis (skip if positions[i]=0)
+2. **Actual Position Query**: Send `ExxmTP?` command sequentially to each axis
+3. **Status Query**: Send `ExxmMD?` command sequentially to each axis
+
+### Requirements Correspondence
+
+This implementation satisfies the following requirements:
+
+- ✅ **Requirement 6**: Set relative move amounts for 4 axes with one function call (no move if 0)
+- ✅ **Requirement 7**: Query absolute positions of 4 axes with one function call
+- ✅ **Requirement 8**: Query status (moving/stopped) of 4 axes with one function call
+
+### Notes
+
+- These are DLL-level wrapper functions, not hardware-level simultaneous operations
+- Commands are sent sequentially to each axis, not truly simultaneous
+- Efficient for reducing code complexity when operating multiple axes

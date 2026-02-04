@@ -91,10 +91,10 @@ pamc204::move_infinite(1, 1, '+');          // E011MV+
 pamc204::stop_motion(1, 1);                 // E011ST
 pamc204::abort_motion(1);                   // E01AB
 
-// 4-channel simultaneous operation (DLL-level extension)
-pamc204::move_relative_all_channels(1, 500);  // Move all channels +500
-pamc204::move_infinite_all_channels(1, '+');  // Move all channels infinitely in + direction
-pamc204::stop_motion_all_channels(1);         // Stop all channels
+// 4-axis simultaneous operation (DLL-level extension)
+pamc204::move_relative_all_channels(1, 500);  // Move all axes +500
+pamc204::move_infinite_all_channels(1, '+');  // Move all axes infinitely in + direction
+pamc204::stop_motion_all_channels(1);         // Stop all axes
 int actual_positions[4];
 pamc204::query_actual_position_all_channels(1, actual_positions);
 int statuses[4];
@@ -116,7 +116,7 @@ pamc204_move_infinite(1, 1, '+');
 pamc204_stop_motion(1, 1);
 pamc204_abort_motion(1);
 
-// 4-channel simultaneous operation (DLL-level extension)
+// 4-axis simultaneous operation (DLL-level extension)
 pamc204_move_relative_all_channels(1, 500);
 pamc204_move_infinite_all_channels(1, '+');
 pamc204_stop_motion_all_channels(1);

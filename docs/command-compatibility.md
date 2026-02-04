@@ -38,11 +38,11 @@
 | **21. 無限移動** | `ExxmMVn` | `xxMV+/-` | PAMC204: m=1-4（CH指定）、n=+/-（方向指定）<br>**F/W Ver.0.2.1以降で加速度対応** |
 | **22. 移動方向問い合わせ** | `ExxmMV?` | - | PAMC204固有、m=1-4（CH指定）、0=駆動中、1=停止 |
 | **23. 動作停止** | `ExxmST` | `xxST` | PAMC204: m=1-4（CH指定）、減速停止<br>Model8742: 減速停止<br>**F/W Ver.0.2.1以降で加速度対応** |
-| **24. 4CH同時相対移動** | `move_relative_all_channels(addr, pos)` | - | PAMC204 DLLレベル拡張<br>全チャンネルを同じ距離だけ相対移動 |
-| **25. 4CH同時実位置取得** | `query_actual_position_all_channels(addr, pos[4])` | - | PAMC204 DLLレベル拡張<br>4チャンネルの実位置を一度に取得 |
-| **26. 4CH同時状態取得** | `query_motion_status_all_channels(addr, stat[4])` | - | PAMC204 DLLレベル拡張<br>4チャンネルの状態を一度に取得 |
-| **27. 4CH同時無限移動** | `move_infinite_all_channels(addr, dir)` | - | PAMC204 DLLレベル拡張<br>全チャンネルを同じ方向に無限移動 |
-| **28. 4CH同時動作停止** | `stop_motion_all_channels(addr)` | - | PAMC204 DLLレベル拡張<br>全チャンネルの動作を停止 |
+| **24. 4-axis同時相対移動** | `move_relative_all_channels(addr, pos)` | - | PAMC204 DLLレベル拡張<br>全軸を同じ距離だけ相対移動 |
+| **25. 4-axis同時実位置取得** | `query_actual_position_all_channels(addr, pos[4])` | - | PAMC204 DLLレベル拡張<br>4軸の実位置を一度に取得 |
+| **26. 4-axis同時状態取得** | `query_motion_status_all_channels(addr, stat[4])` | - | PAMC204 DLLレベル拡張<br>4軸の状態を一度に取得 |
+| **27. 4-axis同時無限移動** | `move_infinite_all_channels(addr, dir)` | - | PAMC204 DLLレベル拡張<br>全軸を同じ方向に無限移動 |
+| **28. 4-axis同時動作停止** | `stop_motion_all_channels(addr)` | - | PAMC204 DLLレベル拡張<br>全軸の動作を停止 |
 | **モータータイプ設定** | - | `xxQM nn` | Model8742固有機能 |
 
 ### パラメータ詳細対比
@@ -224,32 +224,32 @@ AB     (即停止)
    - PAMC204: 1台あたり同時に1CHのみ駆動可能
    - 別のCHを駆動すると現在駆動中のモーターは自動停止
 
-## 4チャンネル同時操作API（DLLレベル拡張）
+## 4軸同時操作API（DLLレベル拡張）
 
-PAMC204のライブラリでは、複数チャンネルを効率的に操作するための拡張APIを提供しています。これらのAPIは、既存の単一チャンネルコマンドを内部で順次実行するラッパー関数です。
+PAMC204のライブラリでは、複数軸を効率的に操作するための拡張APIを提供しています。これらのAPIは、既存の単一軸コマンドを内部で順次実行するラッパー関数です。
 
 ### 提供される機能
 
 | 機能 | API関数 | 説明 |
 |------|---------|------|
-| **4CH同時相対移動** | `move_relative_all_channels(address, positions[4])` | 4チャンネルの相対位置を一度に設定<br>positions[i]=0の場合、そのチャンネルは移動しない |
-| **4CH同時実位置取得** | `query_actual_position_all_channels(address, positions[4])` | 4チャンネルの実位置を一度に取得 |
-| **4CH同時状態取得** | `query_motion_status_all_channels(address, statuses[4])` | 4チャンネルの動作状態を一度に取得<br>0=駆動中、1=停止 |
+| **4軸同時相対移動** | `move_relative_all_channels(address, positions[4])` | 4軸の相対位置を一度に設定<br>positions[i]=0の場合、その軸は移動しない |
+| **4軸同時実位置取得** | `query_actual_position_all_channels(address, positions[4])` | 4軸の実位置を一度に取得 |
+| **4軸同時状態取得** | `query_motion_status_all_channels(address, statuses[4])` | 4軸の動作状態を一度に取得<br>0=駆動中、1=停止 |
 
 ### 使用例
 
 ```cpp
 #include "pamc204.h"
 
-// 4チャンネル同時相対移動
-int positions[4] = {1000, 0, -500, 2000};  // CH1:+1000, CH2:移動なし, CH3:-500, CH4:+2000
+// 4軸同時相対移動
+int positions[4] = {1000, 0, -500, 2000};  // Axis1:+1000, Axis2:移動なし, Axis3:-500, Axis4:+2000
 pamc204::move_relative_all_channels(1, positions);
 
-// 4チャンネル同時実位置取得
+// 4軸同時実位置取得
 int actual_positions[4];
 pamc204::query_actual_position_all_channels(1, actual_positions);
 
-// 4チャンネル同時状態取得
+// 4軸同時状態取得
 int statuses[4];
 pamc204::query_motion_status_all_channels(1, statuses);
 ```
@@ -258,17 +258,17 @@ pamc204::query_motion_status_all_channels(1, statuses);
 
 これらのAPIは、DLLレベルで以下のように実装されています：
 
-1. **相対移動**: 各チャンネルに対して`ExxmPRnnnn`コマンドを順次送信（positions[i]=0の場合はスキップ）
-2. **実位置取得**: 各チャンネルに対して`ExxmTP?`コマンドを順次送信
-3. **状態取得**: 各チャンネルに対して`ExxmMD?`コマンドを順次送信
+1. **相対移動**: 各軸に対して`ExxmPRnnnn`コマンドを順次送信（positions[i]=0の場合はスキップ）
+2. **実位置取得**: 各軸に対して`ExxmTP?`コマンドを順次送信
+3. **状態取得**: 各軸に対して`ExxmMD?`コマンドを順次送信
 
 ### 要件との対応
 
 この実装により、以下の要件を満たしています：
 
-- ✅ **要件6**: 1つの関数呼び出しで4チャンネルの相対移動量を設定可能（0の場合は移動しない）
-- ✅ **要件7**: 1つの関数呼び出しで4チャンネルの絶対位置を取得可能
-- ✅ **要件8**: 1つの関数呼び出しで4チャンネルの状態（移動中/停止）を取得可能
+- ✅ **要件6**: 1つの関数呼び出しで4軸の相対移動量を設定可能（0の場合は移動しない）
+- ✅ **要件7**: 1つの関数呼び出しで4軸の絶対位置を取得可能
+- ✅ **要件8**: 1つの関数呼び出しで4軸の状態（移動中/停止）を取得可能
 
 ### 注意事項
 
