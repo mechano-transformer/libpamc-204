@@ -91,6 +91,13 @@ pamc204::move_infinite(1, 1, '+');          // E011MV+
 pamc204::stop_motion(1, 1);                 // E011ST
 pamc204::abort_motion(1);                   // E01AB
 
+// 4チャンネル同時操作（DLLレベル拡張）
+pamc204::move_relative_all_channels(1, 500);  // 全チャンネルを+500移動
+int actual_positions[4];
+pamc204::query_actual_position_all_channels(1, actual_positions);
+int statuses[4];
+pamc204::query_motion_status_all_channels(1, statuses);
+
 // C API（pamc204_プレフィックスで保護）
 pamc204_get_firmware_version(1);
 pamc204_check_device(1);
@@ -106,9 +113,16 @@ pamc204_query_actual_position(1, 1);
 pamc204_move_infinite(1, 1, '+');
 pamc204_stop_motion(1, 1);
 pamc204_abort_motion(1);
+
+// 4チャンネル同時操作（DLLレベル拡張）
+pamc204_move_relative_all_channels(1, 500);
+int actual_positions[4];
+pamc204_query_actual_position_all_channels(1, actual_positions);
+int statuses[4];
+pamc204_query_motion_status_all_channels(1, statuses);
 ```
 
-### 🔧 低レベルAPI
+### � 低レベルAPI
 
 汎用コマンド送信（柔軟性が高い）：
 

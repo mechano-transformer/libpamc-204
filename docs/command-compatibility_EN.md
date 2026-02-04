@@ -38,6 +38,9 @@
 | **21. Infinite Move** | `ExxmMVn` | `xxMV+/-` | PAMC204: m=1-4 (CH specification), n=+/- (direction specification)<br>**Acceleration support in F/W Ver.0.2.1 and later** |
 | **22. Move Direction Query** | `ExxmMV?` | - | PAMC204-specific, m=1-4 (CH specification), 0=moving, 1=stopped |
 | **23. Motion Stop** | `ExxmST` | `xxST` | PAMC204: m=1-4 (CH specification), decelerated stop<br>Model8742: Decelerated stop<br>**Acceleration support in F/W Ver.0.2.1 and later** |
+| **24. 4CH Simultaneous Relative Move** | `move_relative_all_channels(addr, pos)` | - | PAMC204 DLL-level extension<br>Move all channels by the same distance |
+| **25. 4CH Simultaneous Actual Position Query** | `query_actual_position_all_channels(addr, pos[4])` | - | PAMC204 DLL-level extension<br>Query actual positions of 4 channels at once |
+| **26. 4CH Simultaneous Status Query** | `query_motion_status_all_channels(addr, stat[4])` | - | PAMC204 DLL-level extension<br>Query status of 4 channels at once |
 | **Motor Type Setting** | - | `xxQM nn` | Model8742-specific feature |
 
 ### Parameter Details Comparison

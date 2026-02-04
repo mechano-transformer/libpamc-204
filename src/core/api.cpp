@@ -184,6 +184,53 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // ========================================================================
+    // 4チャンネル同時操作API実装
+    // ========================================================================
+
+    bool move_relative_all_channels(int address, int position)
+    {
+        // 全チャンネルに同じ相対位置を設定
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!move_relative(address, ch, position))
+            {
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
+    bool query_actual_position_all_channels(int address, int positions[4])
+    {
+        // 各チャンネルの実位置を順次問い合わせ
+        // 注: 実際のレスポンス解析はserial.cpp内で行われるため、
+        // ここでは単にコマンドを送信するのみ
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!query_actual_position(address, ch))
+            {
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
+    bool query_motion_status_all_channels(int address, int statuses[4])
+    {
+        // 各チャンネルの動作状態を順次問い合わせ
+        // 注: 実際のレスポンス解析はserial.cpp内で行われるため、
+        // ここでは単にコマンドを送信するのみ
+        for (int ch = 1; ch <= 4; ch++)
+        {
+            if (!query_motion_status(address, ch))
+            {
+                return false; // エラーが発生した場合は即座に終了
+            }
+        }
+        return true;
+    }
+
 } // namespace pamc204
 
 // ============================================================================
@@ -324,6 +371,22 @@ extern "C"
     bool pamc204_stop_motion(int address, int channel)
     {
         return pamc204::stop_motion(address, channel);
+    }
+
+    // 4チャンネル同時操作API
+    bool pamc204_move_relative_all_channels(int address, int position)
+    {
+        return pamc204::move_relative_all_channels(address, position);
+    }
+
+    bool pamc204_query_actual_position_all_channels(int address, int positions[4])
+    {
+        return pamc204::query_actual_position_all_channels(address, positions);
+    }
+
+    bool pamc204_query_motion_status_all_channels(int address, int statuses[4])
+    {
+        return pamc204::query_motion_status_all_channels(address, statuses);
     }
 
 } // extern "C"

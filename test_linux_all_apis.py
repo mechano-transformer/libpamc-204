@@ -63,6 +63,16 @@ lib.pamc204_stop_motion.argtypes = [c_int, c_int]
 lib.pamc204_abort_motion.restype = c_bool
 lib.pamc204_abort_motion.argtype = c_int
 
+# 4チャンネル同時操作API
+lib.pamc204_move_relative_all_channels.restype = c_bool
+lib.pamc204_move_relative_all_channels.argtypes = [c_int, c_int]
+
+lib.pamc204_query_actual_position_all_channels.restype = c_bool
+lib.pamc204_query_actual_position_all_channels.argtypes = [c_int, c_int * 4]
+
+lib.pamc204_query_motion_status_all_channels.restype = c_bool
+lib.pamc204_query_motion_status_all_channels.argtypes = [c_int, c_int * 4]
+
 # テスト対象アドレス
 address = 1  # E01
 
@@ -96,6 +106,21 @@ tests = [
     
     # 最終確認
     ("query_actual_position_final", lambda: lib.pamc204_query_actual_position(address, 1), 0),
+    
+    # 4チャンネル同時操作APIテスト
+    ("move_relative_all_channels", lambda: lib.pamc204_move_relative_all_channels(address, 500), 2.0),
+    
+    ("query_actual_position_all_channels", lambda: (
+        positions := (c_int * 4)(),
+        lib.pamc204_query_actual_position_all_channels(address, positions),
+        print(f"  Positions: CH1={positions[0]}, CH2={positions[1]}, CH3={positions[2]}, CH4={positions[3]}")
+    )[1], 0),
+    
+    ("query_motion_status_all_channels", lambda: (
+        statuses := (c_int * 4)(),
+        lib.pamc204_query_motion_status_all_channels(address, statuses),
+        print(f"  Statuses: CH1={'停止' if statuses[0] else '駆動中'}, CH2={'停止' if statuses[1] else '駆動中'}, CH3={'停止' if statuses[2] else '駆動中'}, CH4={'停止' if statuses[3] else '駆動中'}")
+    )[1], 0),
 ]
 
 # 順に試す
