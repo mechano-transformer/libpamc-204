@@ -195,6 +195,7 @@ namespace pamc204
         {
             if (!move_relative(address, ch, position))
             {
+                std::fprintf(stderr, "move_relative_all_channels: Failed at axis %d\n", ch);
                 return false; // エラーが発生した場合は即座に終了
             }
         }
@@ -210,6 +211,7 @@ namespace pamc204
         {
             if (!query_actual_position(address, ch))
             {
+                std::fprintf(stderr, "query_actual_position_all_channels: Failed at axis %d\n", ch);
                 return false; // エラーが発生した場合は即座に終了
             }
         }
@@ -225,6 +227,7 @@ namespace pamc204
         {
             if (!query_motion_status(address, ch))
             {
+                std::fprintf(stderr, "query_motion_status_all_channels: Failed at axis %d\n", ch);
                 return false; // エラーが発生した場合は即座に終了
             }
         }
@@ -238,6 +241,7 @@ namespace pamc204
         {
             if (!move_infinite(address, ch, direction))
             {
+                std::fprintf(stderr, "move_infinite_all_channels: Failed at axis %d\n", ch);
                 return false; // エラーが発生した場合は即座に終了
             }
         }
@@ -251,6 +255,7 @@ namespace pamc204
         {
             if (!stop_motion(address, ch))
             {
+                std::fprintf(stderr, "stop_motion_all_channels: Failed at axis %d\n", ch);
                 return false; // エラーが発生した場合は即座に終了
             }
         }
