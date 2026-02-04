@@ -9,7 +9,7 @@
 #include <vector>
 #include <cstdio>
 #include "pamc204.h"
-#include "pamc204_internal.h"
+#include "utils.h"
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
@@ -125,12 +125,14 @@ static std::string detect_port_name(const std::string &vid = "0403",
 {
     namespace fs = std::filesystem;
 
-    for (const auto &entry : fs::directory_iterator("/dev")) {
+    for (const auto &entry : fs::directory_iterator("/dev"))
+    {
         const std::string devPath = entry.path().string();
 
         // 対象は ttyUSB* または ttyACM*
         if (devPath.find("ttyUSB") == std::string::npos &&
-            devPath.find("ttyACM") == std::string::npos) {
+            devPath.find("ttyACM") == std::string::npos)
+        {
             continue;
         }
 
@@ -139,16 +141,19 @@ static std::string detect_port_name(const std::string &vid = "0403",
         std::array<char, 512> buffer{};
         std::string result;
         FILE *pipe = popen(cmd.c_str(), "r");
-        if (!pipe) continue;
+        if (!pipe)
+            continue;
 
-        while (fgets(buffer.data(), buffer.size(), pipe)) {
+        while (fgets(buffer.data(), buffer.size(), pipe))
+        {
             result += buffer.data();
         }
         pclose(pipe);
 
         // VID/PID が一致すればこのポートを返す
         if (result.find("ID_VENDOR_ID=" + vid) != std::string::npos &&
-            result.find("ID_MODEL_ID=" + pid) != std::string::npos) {
+            result.find("ID_MODEL_ID=" + pid) != std::string::npos)
+        {
             return devPath;
         }
     }
@@ -156,7 +161,6 @@ static std::string detect_port_name(const std::string &vid = "0403",
     // 見つからなければ空文字列
     return "";
 }
-
 
 // 共通API（Linux版）
 namespace pamc204

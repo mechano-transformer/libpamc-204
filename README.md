@@ -1,8 +1,7 @@
 # libpamc-204
 
 クロスプラットフォーム対応のPAMC204制御用ライブラリです。  
-Windows では DLL、Linux/WSL2 では SO としてビルドできます。  
-共通 API `pamc204::send_command(command)` を提供し、OS ごとに内部実装を切り替えています。
+Windows では DLL、Linux/WSL2 では SO としてビルドできます。
 
 ## 📦 必要環境
 
@@ -20,12 +19,12 @@ libpamc-204/
 ├── CMakeLists.txt              # ビルド設定（Windows/Linux両対応）
 ├── README.md
 ├── include/                    # 公開ヘッダ
-│   ├── pamc204.h               # メインAPI
-│   └── pamc204_internal.h      # 内部ユーティリティ
+│   └── pamc204.h               # メインAPI
 ├── src/
 │   ├── core/                   # プラットフォーム非依存コード
 │   │   ├── api.cpp             # 高レベルAPI実装
-│   │   └── utils.cpp           # 共通ユーティリティ
+│   │   ├── utils.cpp           # 共通ユーティリティ
+│   │   └── utils.h             # 内部ヘッダー
 │   └── platform/               # プラットフォーム固有実装
 │       ├── windows/
 │       │   └── serial.cpp      # Windows実装（Win32 API）
@@ -41,7 +40,7 @@ libpamc-204/
 
 ```bash
 cd libpamc-204
-mkdir build -p && cd build
+mkdir -p build && cd build
 cmake ..
 cmake --build .
 ```
@@ -51,7 +50,7 @@ cmake --build .
 - `./build/libpamc204.so` (共有ライブラリ)
 - `./build/test_serial` (テスト用実行ファイル)
 
-### Windows (VSCode + CMake Tools または CMake/Ninja)
+### Windows
 
 ```powershell
 cd libpamc-204
@@ -63,22 +62,15 @@ cmake --build .
 
 生成物:
 
-- Debugビルド時
-  - build\Debug\pamc204.dll   # DLL本体
-  - build\Debug\pamc204.lib   # インポートライブラリ
-  - build\Debug\pamc204.exp   # エクスポート情報
-  - build\Debug\test_serial.exe # 動作確認用実行ファイル
-
-- Releaseビルド時
-  - build\Release\pamc204.dll
-  - build\Release\pamc204.lib
-  - build\Release\test_serial.exe
+- `build\Debug\pamc204.dll` (DLL本体)
+- `build\Debug\pamc204.lib` (インポートライブラリ)
+- `build\Debug\test_serial.exe` (動作確認用実行ファイル)
 
 ## ▶️ 使い方
 
 ### 🎯 高レベルAPI（推奨）
 
-個別コマンド専用関数を使用する方法（PDFのCmdLibスタイル）：
+個別コマンド専用関数を使用する方法：
 
 ```cpp
 #include "pamc204.h"
@@ -89,25 +81,31 @@ pamc204::check_device(1);                   // E01
 pamc204::set_voltage(1, 4095);              // E01DAC4095 (150V)
 pamc204::rotate_positive(1, 1500, 1000, 'A'); // E01NR15001000A
 pamc204::stop(1);                           // E01S
-pamc204::set_acceleration(1, 1, 10000);     // E011AC10000 (CH1の加速度を10000に設定)
-pamc204::query_acceleration(1, 1);          // E011AC? (CH1の加速度問い合わせ)
-pamc204::set_velocity(1, 1, 1500);          // E011VA1500 (CH1の速度を1500に設定)
-pamc204::move_absolute(1, 1, 10000);        // E011PA10000 (CH1を絶対位置10000に移動)
-pamc204::move_relative(1, 1, 5000);         // E011PR5000 (CH1を相対位置+5000移動)
-pamc204::query_actual_position(1, 1);       // E011TP? (CH1の実位置問い合わせ)
-pamc204::move_infinite(1, 1, '+');          // E011MV+ (CH1を+方向に無限移動)
-pamc204::stop_motion(1, 1);                 // E011ST (CH1の動作停止)
-pamc204::abort_motion(1);                   // E01AB (全CH即停止)
+pamc204::set_acceleration(1, 1, 10000);     // E011AC10000
+pamc204::query_acceleration(1, 1);          // E011AC?
+pamc204::set_velocity(1, 1, 1500);          // E011VA1500
+pamc204::move_absolute(1, 1, 10000);        // E011PA10000
+pamc204::move_relative(1, 1, 5000);         // E011PR5000
+pamc204::query_actual_position(1, 1);       // E011TP?
+pamc204::move_infinite(1, 1, '+');          // E011MV+
+pamc204::stop_motion(1, 1);                 // E011ST
+pamc204::abort_motion(1);                   // E01AB
 
 // C API（pamc204_プレフィックスで保護）
 pamc204_get_firmware_version(1);
+pamc204_check_device(1);
+pamc204_set_voltage(1, 4095);
 pamc204_rotate_positive(1, 1500, 1000, 'A');
 pamc204_stop(1);
 pamc204_set_acceleration(1, 1, 10000);
 pamc204_query_acceleration(1, 1);
 pamc204_set_velocity(1, 1, 1500);
 pamc204_move_absolute(1, 1, 10000);
+pamc204_move_relative(1, 1, 5000);
 pamc204_query_actual_position(1, 1);
+pamc204_move_infinite(1, 1, '+');
+pamc204_stop_motion(1, 1);
+pamc204_abort_motion(1);
 ```
 
 ### 🔧 低レベルAPI
@@ -125,108 +123,55 @@ pamc204::send_command("E01NR15001000A");
 pamc204_send_command("E01INF");
 ```
 
-- `command`: 送信する文字列（CRLF が自動付加されます）
-
 戻り値:
 
 - `true`: 成功
-- `false`: エラー（Windowsでは `GetLastError()`、Linuxでは標準出力にエラー行）
+- `false`: エラー
 
-### 📋 (参考)コマンド表
+### 📋 コマンドリファレンス
 
-PAMC-204で使用可能なコマンド一覧：
+| No | コマンドフォーマット | 使用例 | 説明 |
+|----|------------------|--------|------|
+| 1 | `ExxINF` | `send_command("E01INF")` | ファームウェアバージョン確認 |
+| 2 | `Exx` | `send_command("E01")` | デバイス存在確認 |
+| 3 | `SETADDRxx` | `send_command("SETADDR02")` | アドレス変更（E02に変更） |
+| 4 | `ExxDACnnnn` | `send_command("E01DAC4095")`<br>`send_command("E01DAC1900")` | 駆動電圧調整（150V / 70V）<br>範囲: 70V～150V |
+| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `send_command("E01NR15001500A")`<br>`send_command("E01NR1500X100000A")`<br>`send_command("E01NR15000000A")` | 正回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス<br>1500Hz/連続 |
+| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `send_command("E01RR15001500B")`<br>`send_command("E01RR1500X100000B")` | 逆回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス |
+| 7 | `ExxS` | `send_command("E01S")` | パルス駆動停止 |
+| 8 | `ExxAB` | `send_command("E01AB")` | モーション停止（全CH即停止） |
+| 9 | `ExxmACnnnn` | `send_command("E011AC10000")` | 加速度設定（10000 steps/sec²）<br>範囲: 1～150000 |
+| 10 | `ExxmAC?` | `send_command("E011AC?")` | 加速度問い合わせ |
+| 11 | `ExxmVAnnnn` | `send_command("E011VA1500")` | 速度設定（1500 steps/sec）<br>範囲: 1～1500 |
+| 12 | `ExxmVA?` | `send_command("E011VA?")` | 速度問い合わせ |
+| 13 | `ExxmDHnnnn` | `send_command("E011DH0")` | ホームポジション設定 |
+| 14 | `ExxmDH?` | `send_command("E011DH?")` | ホームポジション問い合わせ |
+| 15 | `ExxmPAnnnn` | `send_command("E011PA10000")` | 絶対位置移動（位置10000）<br>範囲: -2147483648～+2147483647 |
+| 16 | `ExxmPA?` | `send_command("E011PA?")` | 絶対位置問い合わせ |
+| 17 | `ExxmPRnnnn` | `send_command("E011PR5000")` | 相対位置移動（+5000） |
+| 18 | `ExxmPR?` | `send_command("E011PR?")` | 相対位置問い合わせ |
+| 19 | `ExxmTP?` | `send_command("E011TP?")` | 実位置問い合わせ |
+| 20 | `ExxmMD?` | `send_command("E011MD?")` | 動作状態確認 |
+| 21 | `ExxmMVn` | `send_command("E011MV+")` | 無限移動（+方向）<br>方向: + または - |
+| 22 | `ExxmMV?` | `send_command("E011MV?")` | 移動方向問い合わせ |
+| 23 | `ExxmST` | `send_command("E011ST")` | 動作停止 |
 
-| No | コマンド | 詳細 |
-|----|---------|------|
-| 1 | `ExxINF` | ファームウェアバージョンの確認 |
-| 2 | `Exx` | アドレスを持つドライバーがネットワーク内に存在するかどうかを確認 |
-| 3 | `SETADDRxx` | ドライバのアドレスを変更 |
-| 4 | `ExxDACnnnn` | 駆動電圧の調整 |
-| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | 正回転駆動コマンド（パルス駆動） |
-| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | 逆回転駆動コマンド（パルス駆動） |
-| 7 | `ExxS` | 停止コマンド（パルス駆動） |
-| 8 | `ExxAB` | モーション停止（全CH即停止） |
-| 9 | `ExxmACnnnn` | 加速度設定 |
-| 10 | `ExxmAC?` | 加速度問い合わせ |
-| 11 | `ExxmVAnnnn` | 速度設定 |
-| 12 | `ExxmVA?` | 速度問い合わせ |
-| 13 | `ExxmDHnnnn` | ホームポジション設定 |
-| 14 | `ExxmDH?` | ホームポジション問い合わせ |
-| 15 | `ExxmPAnnnn` | 絶対位置移動 |
-| 16 | `ExxmPA?` | 絶対位置問い合わせ |
-| 17 | `ExxmPRnnnn` | 相対位置移動 |
-| 18 | `ExxmPR?` | 相対位置問い合わせ |
-| 19 | `ExxmTP?` | 実位置問い合わせ |
-| 20 | `ExxmMD?` | 動作状態確認 |
-| 21 | `ExxmMVn` | 無限移動 |
-| 22 | `ExxmMV?` | 移動方向問い合わせ |
-| 23 | `ExxmST` | 動作停止 |
+**パラメータ説明:**
 
-### 📋 API使用例
+- `xx`: アドレス（01～32）
+- `nnnn`: 周波数（1～1500 Hz）、加速度、速度、位置など
+- `yyyy`: パルス数（0000～9999、0000=連続）
+- `Xyyyyyy`: 拡張パルス数（X000001～X999999）
+- `z`: チャンネル（A=CH1, B=CH2, C=CH3, D=CH4）
+- `m`: チャンネル番号（1～4）
+- `n`: 方向（+ または -）
 
-PAMC-204のコマンド仕様に基づく使用例：
+### エラーメッセージ
 
-| 機能 | コマンド例 | 説明 |
-|------|-----------|------|
-| **ファームウェアバージョン確認** | `send_command("E01INF")` | アドレスE01のドライバのファームウェアバージョンを取得 |
-| **デバイス存在確認** | `send_command("E01")` | アドレスE01のドライバが接続されているか確認 |
-| **アドレス変更** | `send_command("SETADDR02")` | 接続中のドライバのアドレスをE02に変更 |
-| **出力電圧調整** | `send_command("E01DAC4095")` | アドレスE01の出力電圧を150Vに設定 |
-| | `send_command("E01DAC3000")` | アドレスE01の出力電圧を110Vに設定 |
-| | `send_command("E01DAC1900")` | アドレスE01の出力電圧を70Vに設定 |
-| **正回転駆動（パルス指定）** | `send_command("E01NR15001500A")` | E01のCH1を1500Hzで1500パルス正回転 |
-| | `send_command("E01NR1500X100000A")` | E01のCH1を1500Hzで100000パルス正回転 |
-| **正回転駆動（連続）** | `send_command("E01NR15000000A")` | E01のCH1を1500Hzで連続正回転 |
-| **逆回転駆動（パルス指定）** | `send_command("E01RR15001500B")` | E01のCH2を1500Hzで1500パルス逆回転 |
-| | `send_command("E01RR1500X100000B")` | E01のCH2を1500Hzで100000パルス逆回転 |
-| **逆回転駆動（連続）** | `send_command("E01RR15000000C")` | E01のCH3を1500Hzで連続逆回転 |
-| **停止** | `send_command("E01S")` | E01の連続駆動を停止 |
-| **加速度設定** | `send_command("E011AC10000")` | E01のCH1の加速度を10000 steps/sec²に設定 |
-| **加速度問い合わせ** | `send_command("E011AC?")` | E01のCH1の加速度を問い合わせ |
-| **速度設定** | `send_command("E011VA1500")` | E01のCH1の速度を1500 steps/secに設定 |
-| **絶対位置移動** | `send_command("E011PA10000")` | E01のCH1を絶対位置10000に移動 |
-| **相対位置移動** | `send_command("E011PR5000")` | E01のCH1を現在位置から+5000移動 |
-| **実位置問い合わせ** | `send_command("E011TP?")` | E01のCH1の現在位置を問い合わせ |
-| **無限移動** | `send_command("E011MV+")` | E01のCH1を+方向に無限移動 |
-| **動作停止** | `send_command("E011ST")` | E01のCH1の動作を停止 |
-| **モーション停止** | `send_command("E01AB")` | E01の全CHを即停止 |
-
-#### コマンドフォーマット詳細
-
-**パルス駆動コマンド:**
-
-- **アドレス**: `xx` = 01～32（例: E01, E02, ...）
-- **周波数**: `nnnn` = 0001～1500 Hz
-- **パルス数**:
-  - 4桁: `yyyy` = 0000～9999（0000=連続駆動）
-  - 6桁: `Xyyyyyy` = X000001～X999999（Xプレフィックス付き）
-- **チャンネル**: `z` = A（CH1）, B（CH2）, C（CH3）, D（CH4）
-- **出力電圧**: 70V～150V
-
-**位置制御コマンド:**
-
-- **アドレス**: `xx` = 01～32
-- **チャンネル**: `m` = 1～4
-- **加速度**: `nnnn` = 1～150000 steps/sec²
-- **速度**: `nnnn` = 1～1500 steps/sec
-- **位置**: `nnnn` = -2147483648～+2147483647
-- **方向**: `n` = +（正方向）または -（負方向）
-
-#### エラーメッセージ
-
-- ライブラリによるエラーメッセージ表示例
-
-```
-ERROR: ERROR1 - コマンドが認識できません
-ERROR: ERROR4 - 6桁パルス数が範囲外です（X000001～X999999）
-ERROR: BUSY - ドライバが駆動中です。停止後に再送信してください
-```
-
-- エラー仕様
 | エラー | 説明 |
 |--------|------|
 | `Error Value Range` | 出力電圧の値が範囲外（70V～150V） |
-| `ERROR` | 回転方向、周波数、チャンネル指定が不正、またはコマンド認識不可 |
+| `ERROR` | 回転方向、周波数、チャンネル指定が不正 |
 | `ERROR1` | コマンド認識不可 |
 | `ERROR4` | 6桁パルス数が範囲外（X000001～X999999） |
 | `ERROR5` | 4桁パルス数が範囲外（0001～9999） |
@@ -246,21 +191,21 @@ sudo ./test_serial "E01INF"
 .\Debug\test_serial.exe "E01INF"
 ```
 
-※ `usbipd`でWSLにattachしてるときはそれをwslからdetatchすること
+※ `usbipd`でWSLにattachしてるときはdetatchすること
 
-```powerchesll
+```powershell
 usbipd detach --busid 1-1
 ```
 
 ### 動的ライブラリの動作確認
 
-`test_linux.py`,`test_windows.py`を用意したのでこれを実行することによりライブラリの動作確認が行えます。
-
 ```bash
+# Linux/WSL2
 sudo python3 test_linux_all_apis.py 
 ```
 
 ```powershell
+# Windows
 python3 test_windows_all_apis.py 
 ```
 
@@ -275,16 +220,12 @@ python3 test_windows_all_apis.py
 
 [参考](https://watako-lab.com/2025/05/18/wsl2_usbserial/)
 
-1. CMDを管理者権限で起動
-
 ```powershell
 # 【usbipdのインストール】
 winget install usbipd
 
 #【接続されているUSBデバイスを表示】
 usbipd list
-  1-1    0403:6015  USB Serial Converter       Attached
-　⇒ USBシリアルが1-1というIDであることがわかる。
 
 #【WSL側で使いたいデバイスをバインド】
 usbipd bind --busid 1-1
@@ -292,36 +233,20 @@ usbipd bind --busid 1-1
 #【WSL側で使いたいデバイスをアタッチ】
 usbipd attach --busid 1-1 --wsl
 
-#【\デバイスをデタッチ】
+#【デバイスをデタッチ】
 usbipd detach --busid 1-1
 ```
 
-2. USBデバイスの`VID(Vendor ID)`と`PID(Product ID)`について
+### Github Actionsによる自動ビルド && リリース
 
-```c++
-static std::string detect_port_name(const std::string &vid = "0403", const std::string &pid = "6015")
-```
-
-を使用している
-
-### Guthub Actionsによる自動ビルド && リリース
-#### 基本手順: タグをつけてpushすればGithub Actionが回る
 ```bash
+# タグをつけてpushすればGithub Actionが回る
 git tag v1.0.0
 git push origin v1.0.0
-```
 
-#### tagのpushをやり直したいとき
-```bash
-# （既につけた）リモートのタグ付けを削除
-git push origin :refs/tags/v1.0.0
-
-# ローカルのタグも削除
-git tag -d v1.0.0
-
-# 再度同名のタグを作成
-git tag v1.0.0
-
-# タグをpush
-git push origin v1.0.0
+# tagのpushをやり直したいとき
+git push origin :refs/tags/v1.0.0  # リモートのタグを削除
+git tag -d v1.0.0                  # ローカルのタグを削除
+git tag v1.0.0                     # 再度タグを作成
+git push origin v1.0.0             # タグをpush
 ```

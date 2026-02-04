@@ -1,5 +1,5 @@
-﻿#ifndef PAMC204_INTERNAL_H
-#define PAMC204_INTERNAL_H
+﻿#ifndef PAMC204_UTILS_H
+#define PAMC204_UTILS_H
 
 #include <string>
 
@@ -12,4 +12,4 @@ std::string find_error_token(const std::string &resp);
 // エラーの詳細説明を取得
 std::string get_error_description(const std::string &error_token);
 
-#endif // PAMC204_INTERNAL_H
+#endif // PAMC204_UTILS_H

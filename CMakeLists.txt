@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 公開ヘッダ
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# 内部ヘッダ（src/core）
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/core)
+
 # コアソース（プラットフォーム非依存）
 set(CORE_SRC
     src/core/utils.cpp
