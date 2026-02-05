@@ -1,5 +1,4 @@
 ﻿#include "pamc204.h"
-#include "../serial.h"
 #include "utils.h"
 #include <windows.h>
 #include <setupapi.h>
@@ -323,6 +322,107 @@ namespace pamc204
         {
             std::fprintf(stderr, "read timeout or empty response\n");
         }
+        return true;
+    }
+
+    bool send_commands_batch(const std::vector<std::string> &commands, std::vector<std::string> &responses)
+    {
+        responses.clear();
+        if (commands.empty())
+        {
+            std::fprintf(stderr, "send_commands_batch: no commands provided\n");
+            return false;
+        }
+
+        std::fprintf(stdout, "BATCH COMMAND: %zu commands\n", commands.size());
+
+        // 自動検出
+        std::string com = detect_port_name(); // 例: "COM3"
+        std::fprintf(stdout, "PORT NAME: '%s'\n", com.c_str());
+        if (com.empty())
+        {
+            std::fprintf(stderr, "No PAMC204 device found\n");
+            return false;
+        }
+
+        // "\\.\COMx" へ正規化して開く（1回のみ）
+        std::wstring wcom = to_wstring_utf8(com);
+        std::wstring path = normalize_port_name_w(wcom.c_str());
+        HandleGuard hg(open_port(path));
+        if (!hg.valid())
+        {
+            std::fprintf(stderr, "open failed on %s\n", com.c_str());
+            return false;
+        }
+
+        if (!configure_port(hg.h))
+        {
+            std::fprintf(stderr, "configure_port failed\n");
+            return false;
+        }
+
+        // 各コマンドを順次送信
+        for (size_t i = 0; i < commands.size(); i++)
+        {
+            const std::string &command = commands[i];
+            std::fprintf(stdout, "COMMAND[%zu]: '%s'\n", i + 1, command.c_str());
+
+            // 書き込み
+            if (!write_command_to_port(hg.h, command.c_str()))
+            {
+                std::fprintf(stderr, "write failed at command %zu\n", i + 1);
+                return false;
+            }
+
+            // 読み取り
+            std::string resp = read_response_from_port(hg.h);
+            if (resp.empty())
+            {
+                std::fprintf(stderr, "read timeout or empty response at command %zu\n", i + 1);
+                return false;
+            }
+
+            // エラーチェック
+            std::string token = find_error_token(resp);
+            if (!token.empty())
+            {
+                std::string description = get_error_description(token);
+                std::string errLine = "ERROR at command " + std::to_string(i + 1) + ": " + token + " - " + description + "\r\n";
+                DWORD wrote = 0;
+                HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                if (hStdOut != NULL && hStdOut != INVALID_HANDLE_VALUE)
+                {
+                    DWORD type = GetFileType(hStdOut);
+                    if (type == FILE_TYPE_CHAR)
+                    {
+                        WriteConsoleA(hStdOut, errLine.c_str(), (DWORD)errLine.size(), &wrote, NULL);
+                    }
+                    else
+                    {
+                        WriteFile(hStdOut, errLine.data(), (DWORD)errLine.size(), &wrote, NULL);
+                    }
+                }
+                else
+                {
+                    OutputDebugStringA(errLine.c_str());
+                }
+                OutputDebugStringA(resp.c_str());
+                SetLastError(ERROR_INVALID_DATA);
+                return false;
+            }
+
+            // レスポンスを保存して出力
+            responses.push_back(resp);
+            output_response_once(resp);
+
+            // 次のコマンド送信前に短い待機時間を設ける
+            if (i < commands.size() - 1)
+            {
+                Sleep(50);
+            }
+        }
+
+        // ポートを閉じる（HandleGuardのデストラクタで自動的に閉じられる）
         return true;
     }
 }

@@ -2,6 +2,7 @@
 #define PAMC204_H
 
 #include <string>
+#include <vector>
 
 // ============================================================================
 // C++ API
@@ -15,6 +16,18 @@ namespace pamc204
      * @return 成功時 true、失敗時 false
      */
     bool send_command(const std::string &command);
+
+    /**
+     * @brief 複数のコマンドを1回のポート開閉で順次送信する（効率化版・低レベルAPI）
+     * @param commands 送信するコマンド文字列の配列
+     * @param responses 各コマンドのレスポンスを格納する配列（出力）
+     * @return 成功時 true、失敗時 false
+     * @note ポートを1回だけ開閉し、複数コマンドを順次送信します。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信します。
+     *       いずれかのコマンドでエラーが発生した場合は即座に終了します。
+     *       プラットフォーム固有の実装（serial.cpp）で実装されます。
+     */
+    bool send_commands_batch(const std::vector<std::string> &commands, std::vector<std::string> &responses);
 
     // ========================================================================
     // 高レベルAPI（個別コマンド専用関数）

@@ -1,5 +1,4 @@
 ﻿#include "pamc204.h"
-#include "../serial.h"
 #include "utils.h"
 #include <termios.h>
 #include <fcntl.h>
@@ -223,6 +222,98 @@ namespace pamc204
             }
             output_response(resp);
         }
+        return true;
+    }
+
+    bool send_commands_batch(const std::vector<std::string> &commands, std::vector<std::string> &responses)
+    {
+        responses.clear();
+        if (commands.empty())
+        {
+            std::fprintf(stderr, "send_commands_batch: no commands provided\n");
+            return false;
+        }
+
+        std::fprintf(stdout, "BATCH COMMAND: %zu commands\n", commands.size());
+
+        // ポート名の決定（自動検出）
+        std::string portName = detect_port_name();
+        std::fprintf(stdout, "PORT NAME: '%s'\n", portName.c_str());
+        if (portName.empty())
+        {
+            std::fprintf(stderr, "No PAMC204 device found\n");
+            return false;
+        }
+
+        // ポートを開く（1回のみ）
+        int fd = ::open(portName.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
+        if (fd < 0)
+        {
+            std::fprintf(stderr, "open failed on %s: %s\n",
+                         portName.c_str(), strerror(errno));
+            return false;
+        }
+
+        // 設定
+        bool ok = configure_port(fd);
+        if (!ok)
+        {
+            std::fprintf(stderr, "configure_port failed: %s\n", strerror(errno));
+            ::close(fd);
+            return false;
+        }
+
+        // 各コマンドを順次送信
+        for (size_t i = 0; i < commands.size(); i++)
+        {
+            const std::string &command = commands[i];
+            std::fprintf(stdout, "COMMAND[%zu]: '%s'\n", i + 1, command.c_str());
+
+            // 書き込み
+            std::string msg = command;
+            msg.append("\r\n");
+            ssize_t written = ::write(fd, msg.data(), msg.size());
+            if (written != (ssize_t)msg.size())
+            {
+                std::fprintf(stderr, "write failed at command %zu: %s\n", i + 1, strerror(errno));
+                ::close(fd);
+                return false;
+            }
+
+            // 読み取り
+            std::string resp = read_response(fd);
+            if (resp.empty())
+            {
+                std::fprintf(stderr, "read timeout or empty response at command %zu\n", i + 1);
+                ::close(fd);
+                return false;
+            }
+
+            // エラーチェック
+            std::string token = find_error_token(resp);
+            if (!token.empty())
+            {
+                std::string description = get_error_description(token);
+                std::string errLine = "ERROR at command " + std::to_string(i + 1) + ": " + token + " - " + description + "\n";
+                std::fwrite(errLine.data(), 1, errLine.size(), stdout);
+                std::fflush(stdout);
+                ::close(fd);
+                return false;
+            }
+
+            // レスポンスを保存して出力
+            responses.push_back(resp);
+            output_response(resp);
+
+            // 次のコマンド送信前に短い待機時間を設ける
+            if (i < commands.size() - 1)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+        }
+
+        // ポートを閉じる（1回のみ）
+        ::close(fd);
         return true;
     }
 }
