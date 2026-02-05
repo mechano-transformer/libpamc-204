@@ -3,6 +3,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 // ============================================================================
 // C++ 高レベルAPI実装
@@ -10,7 +11,6 @@
 
 namespace pamc204
 {
-
     bool get_firmware_version(int address)
     {
         char cmd[32];
@@ -193,101 +193,116 @@ namespace pamc204
     bool move_relative_all_channels(int address, int position)
     {
         // 全軸に同じ相対位置を設定
-        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
+        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
-            if (!move_relative(address, ch, position))
-            {
-                std::fprintf(stderr, "move_relative_all_channels: Failed at axis %d (timeout or error)\n", ch);
-                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
-            }
-            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
-            // デバイスが確実に処理を完了できるようにする
-            if (ch < 4)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            }
+            char cmd[64];
+            std::snprintf(cmd, sizeof(cmd), "E%02d%dPR%d", address, ch, position);
+            commands.push_back(cmd);
         }
+
+        std::vector<std::string> responses;
+        if (!send_commands_batch(commands, responses))
+        {
+            std::fprintf(stderr, "move_relative_all_channels: Batch command failed\n");
+            return false;
+        }
+
         return true;
     }
 
     bool query_actual_position_all_channels(int address, int positions[4])
     {
         // 各軸の実位置を順次問い合わせ
-        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
+        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
-            if (!query_actual_position(address, ch))
-            {
-                std::fprintf(stderr, "query_actual_position_all_channels: Failed at axis %d (timeout or error)\n", ch);
-                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
-            }
-            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
-            if (ch < 4)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            }
+            char cmd[32];
+            std::snprintf(cmd, sizeof(cmd), "E%02d%dTP?", address, ch);
+            commands.push_back(cmd);
         }
+
+        std::vector<std::string> responses;
+        if (!send_commands_batch(commands, responses))
+        {
+            std::fprintf(stderr, "query_actual_position_all_channels: Batch command failed\n");
+            return false;
+        }
+
+        // レスポンスから位置情報を抽出（必要に応じて実装）
+        // 現時点ではpositions配列への格納は省略（レスポンスは標準出力に表示される）
+
         return true;
     }
 
     bool query_motion_status_all_channels(int address, int statuses[4])
     {
         // 各軸の動作状態を順次問い合わせ
-        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
+        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
-            if (!query_motion_status(address, ch))
-            {
-                std::fprintf(stderr, "query_motion_status_all_channels: Failed at axis %d (timeout or error)\n", ch);
-                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
-            }
-            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
-            if (ch < 4)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            }
+            char cmd[32];
+            std::snprintf(cmd, sizeof(cmd), "E%02d%dMD?", address, ch);
+            commands.push_back(cmd);
         }
+
+        std::vector<std::string> responses;
+        if (!send_commands_batch(commands, responses))
+        {
+            std::fprintf(stderr, "query_motion_status_all_channels: Batch command failed\n");
+            return false;
+        }
+
+        // レスポンスから状態情報を抽出（必要に応じて実装）
+        // 現時点ではstatuses配列への格納は省略（レスポンスは標準出力に表示される）
+
         return true;
     }
 
     bool move_infinite_all_channels(int address, char direction)
     {
         // 全軸を同じ方向に無限移動
-        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
+        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
-            if (!move_infinite(address, ch, direction))
-            {
-                std::fprintf(stderr, "move_infinite_all_channels: Failed at axis %d (timeout or error)\n", ch);
-                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
-            }
-            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
-            if (ch < 4)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            }
+            char cmd[32];
+            std::snprintf(cmd, sizeof(cmd), "E%02d%dMV%c", address, ch, direction);
+            commands.push_back(cmd);
         }
+
+        std::vector<std::string> responses;
+        if (!send_commands_batch(commands, responses))
+        {
+            std::fprintf(stderr, "move_infinite_all_channels: Batch command failed\n");
+            return false;
+        }
+
         return true;
     }
 
     bool stop_motion_all_channels(int address)
     {
         // 全軸の動作を停止
-        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
+        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
-            if (!stop_motion(address, ch))
-            {
-                std::fprintf(stderr, "stop_motion_all_channels: Failed at axis %d (timeout or error)\n", ch);
-                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
-            }
-            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
-            if (ch < 4)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            }
+            char cmd[32];
+            std::snprintf(cmd, sizeof(cmd), "E%02d%dST", address, ch);
+            commands.push_back(cmd);
         }
+
+        std::vector<std::string> responses;
+        if (!send_commands_batch(commands, responses))
+        {
+            std::fprintf(stderr, "stop_motion_all_channels: Batch command failed\n");
+            return false;
+        }
+
         return true;
     }
 
