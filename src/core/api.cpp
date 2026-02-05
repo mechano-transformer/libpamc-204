@@ -8,9 +8,11 @@
 // ============================================================================
 // C++ 高レベルAPI実装
 // ============================================================================
+// 注: 各関数の詳細なドキュメントは include/pamc204.h を参照してください
 
 namespace pamc204
 {
+    // ファームウェアバージョン取得（ExxINF）
     bool get_firmware_version(int address)
     {
         char cmd[32];
@@ -18,6 +20,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // デバイス存在確認（Exx）
     bool check_device(int address)
     {
         char cmd[32];
@@ -25,6 +28,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // デバイスアドレス変更（SETADDRxx）
     bool set_address(int new_address)
     {
         char cmd[32];
@@ -32,6 +36,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 出力電圧設定（ExxDACnnnn）
     bool set_voltage(int address, int voltage_dac)
     {
         char cmd[32];
@@ -39,6 +44,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 正回転駆動（ExxNRnnnnyyyyz）
     bool rotate_positive(int address, int frequency, int pulses, char channel)
     {
         char cmd[64];
@@ -46,6 +52,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 正回転駆動・拡張パルス数（ExxNRnnnnXyyyyyyz）
     bool rotate_positive_ex(int address, int frequency, int pulses, char channel)
     {
         char cmd[64];
@@ -53,6 +60,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 逆回転駆動（ExxRRnnnnyyyyz）
     bool rotate_negative(int address, int frequency, int pulses, char channel)
     {
         char cmd[64];
@@ -60,6 +68,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 逆回転駆動・拡張パルス数（ExxRRnnnnXyyyyyyz）
     bool rotate_negative_ex(int address, int frequency, int pulses, char channel)
     {
         char cmd[64];
@@ -67,6 +76,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // モーター停止（ExxS）
     bool stop(int address)
     {
         char cmd[32];
@@ -74,6 +84,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // モーション停止（ExxAB）
     bool abort_motion(int address)
     {
         char cmd[32];
@@ -81,6 +92,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 加速度設定（ExxmACnnnn）
     bool set_acceleration(int address, int channel, int acceleration)
     {
         char cmd[32];
@@ -88,6 +100,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 加速度問い合わせ（ExxmAC?）
     bool query_acceleration(int address, int channel)
     {
         char cmd[32];
@@ -95,6 +108,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 速度設定（ExxmVAnnnn）
     bool set_velocity(int address, int channel, int velocity)
     {
         char cmd[32];
@@ -102,6 +116,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 速度問い合わせ（ExxmVA?）
     bool query_velocity(int address, int channel)
     {
         char cmd[32];
@@ -109,6 +124,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // ホームポジション設定（ExxmDHnnnn）
     bool set_home_position(int address, int channel, int position)
     {
         char cmd[64];
@@ -116,6 +132,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // ホームポジション問い合わせ（ExxmDH?）
     bool query_home_position(int address, int channel)
     {
         char cmd[32];
@@ -123,6 +140,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 絶対位置移動（ExxmPAnnnn）
     bool move_absolute(int address, int channel, int position)
     {
         char cmd[64];
@@ -130,6 +148,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 絶対位置問い合わせ（ExxmPA?）
     bool query_absolute_position(int address, int channel)
     {
         char cmd[32];
@@ -137,6 +156,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 相対位置移動（ExxmPRnnnn）
     bool move_relative(int address, int channel, int position)
     {
         char cmd[64];
@@ -144,6 +164,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 相対位置問い合わせ（ExxmPR?）
     bool query_relative_position(int address, int channel)
     {
         char cmd[32];
@@ -151,6 +172,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 実位置問い合わせ（ExxmTP?）
     bool query_actual_position(int address, int channel)
     {
         char cmd[32];
@@ -158,6 +180,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 動作状態確認（ExxmMD?）
     bool query_motion_status(int address, int channel)
     {
         char cmd[32];
@@ -165,6 +188,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 無限移動（ExxmMVn）
     bool move_infinite(int address, int channel, char direction)
     {
         char cmd[32];
@@ -172,6 +196,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 移動方向問い合わせ（ExxmMV?）
     bool query_move_direction(int address, int channel)
     {
         char cmd[32];
@@ -179,6 +204,7 @@ namespace pamc204
         return send_command(cmd);
     }
 
+    // 動作停止（ExxmST）
     bool stop_motion(int address, int channel)
     {
         char cmd[32];
@@ -189,11 +215,16 @@ namespace pamc204
     // ========================================================================
     // 4軸同時操作API実装
     // ========================================================================
+    // 注: これらの関数は send_commands_batch() を使用して、
+    //     1回のポート開閉で全軸のコマンドを送信します（効率化）
 
+    /**
+     * @brief 4軸同時相対位置移動の実装
+     * @note 各軸に対してExxmPRnnnnコマンドを生成し、バッチ送信
+     */
     bool move_relative_all_channels(int address, int position)
     {
-        // 全軸に同じ相対位置を設定
-        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        // 全軸分のコマンドを生成
         std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
@@ -202,6 +233,7 @@ namespace pamc204
             commands.push_back(cmd);
         }
 
+        // バッチ送信（1回のポート開閉で全コマンド送信）
         std::vector<std::string> responses;
         if (!send_commands_batch(commands, responses))
         {
@@ -212,10 +244,14 @@ namespace pamc204
         return true;
     }
 
+    /**
+     * @brief 4軸同時実位置問い合わせの実装
+     * @note 各軸に対してExxmTP?コマンドを生成し、バッチ送信
+     *       レスポンスは標準出力に表示される（positions配列への格納は未実装）
+     */
     bool query_actual_position_all_channels(int address, int positions[4])
     {
-        // 各軸の実位置を順次問い合わせ
-        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        // 全軸分のコマンドを生成
         std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
@@ -224,6 +260,7 @@ namespace pamc204
             commands.push_back(cmd);
         }
 
+        // バッチ送信（1回のポート開閉で全コマンド送信）
         std::vector<std::string> responses;
         if (!send_commands_batch(commands, responses))
         {
@@ -231,16 +268,20 @@ namespace pamc204
             return false;
         }
 
-        // レスポンスから位置情報を抽出（必要に応じて実装）
-        // 現時点ではpositions配列への格納は省略（レスポンスは標準出力に表示される）
+        // TODO: レスポンスから位置情報を抽出してpositions配列に格納
+        // 現時点ではレスポンスは標準出力に表示される
 
         return true;
     }
 
+    /**
+     * @brief 4軸同時動作状態確認の実装
+     * @note 各軸に対してExxmMD?コマンドを生成し、バッチ送信
+     *       レスポンスは標準出力に表示される（statuses配列への格納は未実装）
+     */
     bool query_motion_status_all_channels(int address, int statuses[4])
     {
-        // 各軸の動作状態を順次問い合わせ
-        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        // 全軸分のコマンドを生成
         std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
@@ -249,6 +290,7 @@ namespace pamc204
             commands.push_back(cmd);
         }
 
+        // バッチ送信（1回のポート開閉で全コマンド送信）
         std::vector<std::string> responses;
         if (!send_commands_batch(commands, responses))
         {
@@ -256,16 +298,19 @@ namespace pamc204
             return false;
         }
 
-        // レスポンスから状態情報を抽出（必要に応じて実装）
-        // 現時点ではstatuses配列への格納は省略（レスポンスは標準出力に表示される）
+        // TODO: レスポンスから状態情報を抽出してstatuses配列に格納
+        // 現時点ではレスポンスは標準出力に表示される
 
         return true;
     }
 
+    /**
+     * @brief 4軸同時無限移動の実装
+     * @note 各軸に対してExxmMVnコマンドを生成し、バッチ送信
+     */
     bool move_infinite_all_channels(int address, char direction)
     {
-        // 全軸を同じ方向に無限移動
-        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        // 全軸分のコマンドを生成
         std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
@@ -274,6 +319,7 @@ namespace pamc204
             commands.push_back(cmd);
         }
 
+        // バッチ送信（1回のポート開閉で全コマンド送信）
         std::vector<std::string> responses;
         if (!send_commands_batch(commands, responses))
         {
@@ -284,10 +330,13 @@ namespace pamc204
         return true;
     }
 
+    /**
+     * @brief 4軸同時動作停止の実装
+     * @note 各軸に対してExxmSTコマンドを生成し、バッチ送信
+     */
     bool stop_motion_all_channels(int address)
     {
-        // 全軸の動作を停止
-        // バッチ送信により1回のポート開閉で全コマンドを送信（効率化）
+        // 全軸分のコマンドを生成
         std::vector<std::string> commands;
         for (int ch = 1; ch <= 4; ch++)
         {
@@ -296,6 +345,7 @@ namespace pamc204
             commands.push_back(cmd);
         }
 
+        // バッチ送信（1回のポート開閉で全コマンド送信）
         std::vector<std::string> responses;
         if (!send_commands_batch(commands, responses))
         {

@@ -8,10 +8,16 @@
 #include <vector>
 #include <cstdio>
 
-// DLL エントリポイント (Windows専用)
+/**
+ * @brief DLLエントリポイント（Windows専用）
+ * @note DLLのロード/アンロード時に呼ばれる。特に処理は行わない。
+ */
 BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }
 
-// --- ヘルパー ---
+/**
+ * @brief HANDLEの自動クローズを行うRAIIヘルパークラス
+ * @note デストラクタで自動的にCloseHandle()を呼び出す
+ */
 struct HandleGuard
 {
     HANDLE h;
@@ -25,6 +31,12 @@ struct HandleGuard
     bool valid() const { return h != INVALID_HANDLE_VALUE && h != NULL; }
 };
 
+/**
+ * @brief COMポート名を正規化する
+ * @param comName COMポート名（例: "COM3"）
+ * @return 正規化されたポート名（例: "\\\\.\\COM3"）
+ * @note COM10以降のポートにアクセスするために必要な形式に変換
+ */
 static std::wstring normalize_port_name_w(const wchar_t *comName)
 {
     if (!comName)
@@ -34,6 +46,11 @@ static std::wstring normalize_port_name_w(const wchar_t *comName)
     return std::wstring(L"\\\\.\\") + comName;
 }
 
+/**
+ * @brief UTF-8文字列をワイド文字列に変換する
+ * @param s UTF-8エンコードされた文字列
+ * @return ワイド文字列（UTF-16）
+ */
 static std::wstring to_wstring_utf8(const std::string &s)
 {
     if (s.empty())
@@ -45,11 +62,22 @@ static std::wstring to_wstring_utf8(const std::string &s)
     return w;
 }
 
+/**
+ * @brief シリアルポートを開く
+ * @param portPath ポートパス（例: "\\\\.\\COM3"）
+ * @return ポートハンドル、失敗時はINVALID_HANDLE_VALUE
+ */
 static HANDLE open_port(const std::wstring &portPath)
 {
     return CreateFileW(portPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 }
 
+/**
+ * @brief シリアルポートの通信設定を行う
+ * @param h ポートハンドル
+ * @return 成功時 true、失敗時 false
+ * @note 設定内容: 115200bps, 8bit, パリティなし, ストップビット1, フロー制御なし
+ */
 static bool configure_port(HANDLE h)
 {
     DCB dcb;
@@ -89,6 +117,12 @@ static bool configure_port(HANDLE h)
     return true;
 }
 
+/**
+ * @brief シリアルポートにコマンドを書き込む
+ * @param h ポートハンドル
+ * @param command コマンド文字列（改行コードは自動付与）
+ * @return 成功時 true、失敗時 false
+ */
 static bool write_command_to_port(HANDLE h, const char *command)
 {
     if (!h || h == INVALID_HANDLE_VALUE || !command)
@@ -109,6 +143,15 @@ static bool write_command_to_port(HANDLE h, const char *command)
     return true;
 }
 
+/**
+ * @brief シリアルポートからレスポンスを読み取る
+ * @param h ポートハンドル
+ * @param totalTimeoutMs 全体のタイムアウト時間（ミリ秒）
+ * @param idleTimeoutMs データ受信が途切れた際のアイドルタイムアウト（ミリ秒）
+ * @param bufSize 読み取りバッファサイズ
+ * @return 受信したレスポンス文字列
+ * @note ポーリング方式でデータを読み取り、アイドル時間が経過したら読み取りを終了
+ */
 static std::string read_response_from_port(HANDLE h, DWORD totalTimeoutMs = 2000, DWORD idleTimeoutMs = 200, DWORD bufSize = 1024)
 {
     std::string response;
@@ -154,6 +197,12 @@ static std::string read_response_from_port(HANDLE h, DWORD totalTimeoutMs = 2000
     return response;
 }
 
+/**
+ * @brief レスポンスを標準出力に出力する（Windows版）
+ * @param resp デバイスからのレスポンス文字列
+ * @note エラートークンが含まれている場合は "ERROR: " を付けて出力
+ *       コンソールとリダイレクト先の両方に対応
+ */
 static void output_response_once(const std::string &resp)
 {
     if (resp.empty())
@@ -198,7 +247,13 @@ static void output_response_once(const std::string &resp)
     write_line(outMsg);
 }
 
-// --- COMポート自動検出 (VID/PID指定) ---
+/**
+ * @brief COMポートを自動検出する
+ * @param vid ベンダーID（デフォルト: "0403" = FTDI）
+ * @param pid プロダクトID（デフォルト: "6015" = FT230X）
+ * @return 検出されたポート名（例: "COM3"）、見つからない場合は空文字列
+ * @note SetupAPI を使用してデバイス情報を取得し、VID/PIDが一致するポートを検索
+ */
 static std::string detect_port_name(const std::string &vid = "0403",
                                     const std::string &pid = "6015")
 {
@@ -248,9 +303,18 @@ static std::string detect_port_name(const std::string &vid = "0403",
     return "";
 }
 
+// ============================================================================
+// 公開API実装（Windows版）
+// ============================================================================
+
 namespace pamc204
 {
-    // 共通API（Windows版, Linux版と同じ仕様: cmdのみ受け取る）
+    /**
+     * @brief シリアルポート経由でコマンドを送信し、レスポンスを受信する
+     * @param command 送信するコマンド文字列（改行コードは自動付与）
+     * @return 成功時 true、失敗時 false
+     * @note ポートを開く→コマンド送信→レスポンス受信→ポートを閉じる、の一連の処理を行う
+     */
     bool send_command(const std::string &command)
     {
         std::fprintf(stdout, "COMMAND TO EXECUTE: '%s'\n", command.c_str());
@@ -325,6 +389,16 @@ namespace pamc204
         return true;
     }
 
+    /**
+     * @brief 複数のコマンドを1回のポート開閉で順次送信する（効率化版）
+     * @param commands 送信するコマンド文字列の配列
+     * @param responses 各コマンドのレスポンスを格納する配列（出力）
+     * @return 成功時 true、失敗時 false
+     * @note ポートを1回だけ開き、全コマンドを順次送信してから閉じる。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信。
+     *       いずれかのコマンドでエラーが発生した場合は即座に終了。
+     *       4軸同時操作などで複数コマンドを効率的に送信するために使用。
+     */
     bool send_commands_batch(const std::vector<std::string> &commands, std::vector<std::string> &responses)
     {
         responses.clear();

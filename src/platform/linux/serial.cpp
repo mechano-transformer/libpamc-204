@@ -16,7 +16,11 @@
 #include <array>
 #include <sstream>
 
-// Linux: 出力は stdout に行う
+/**
+ * @brief レスポンスを標準出力に出力する（Linux版）
+ * @param resp デバイスからのレスポンス文字列
+ * @note エラートークンが含まれている場合は "ERROR DETECTED: " を付けて出力
+ */
 static void output_response(const std::string &resp)
 {
     if (resp.empty())
@@ -38,7 +42,12 @@ static void output_response(const std::string &resp)
     std::fflush(stdout);
 }
 
-// termios 設定（115200 8N1 / フロー制御なし）
+/**
+ * @brief シリアルポートの通信設定を行う
+ * @param fd ファイルディスクリプタ
+ * @return 成功時 true、失敗時 false
+ * @note 設定内容: 115200bps, 8bit, パリティなし, ストップビット1, フロー制御なし
+ */
 static bool configure_port(int fd)
 {
     struct termios tty;
@@ -62,7 +71,15 @@ static bool configure_port(int fd)
     return (tcsetattr(fd, TCSANOW, &tty) == 0);
 }
 
-// レスポンス読み取り（Windows版のロジックに近いポーリング）
+/**
+ * @brief シリアルポートからレスポンスを読み取る
+ * @param fd ファイルディスクリプタ
+ * @param totalTimeoutMs 全体のタイムアウト時間（ミリ秒）
+ * @param idleTimeoutMs データ受信が途切れた際のアイドルタイムアウト（ミリ秒）
+ * @param bufSize 読み取りバッファサイズ
+ * @return 受信したレスポンス文字列
+ * @note ポーリング方式でデータを読み取り、アイドル時間が経過したら読み取りを終了
+ */
 static std::string read_response(int fd, int totalTimeoutMs = 2000, int idleTimeoutMs = 200, size_t bufSize = 1024)
 {
     std::string response;
@@ -112,8 +129,13 @@ static std::string read_response(int fd, int totalTimeoutMs = 2000, int idleTime
     return response;
 }
 
-// --- USBポート自動検出 ---
-// 指定した VID/PID に一致するシリアルポートを探す
+/**
+ * @brief USBシリアルポートを自動検出する
+ * @param vid ベンダーID（デフォルト: "0403" = FTDI）
+ * @param pid プロダクトID（デフォルト: "6015" = FT230X）
+ * @return 検出されたポート名（例: "/dev/ttyUSB0"）、見つからない場合は空文字列
+ * @note udevadmコマンドを使用してデバイス情報を取得し、VID/PIDが一致するポートを検索
+ */
 static std::string detect_port_name(const std::string &vid = "0403",
                                     const std::string &pid = "6015")
 {
@@ -156,9 +178,18 @@ static std::string detect_port_name(const std::string &vid = "0403",
     return "";
 }
 
-// 共通API（Linux版）
+// ============================================================================
+// 公開API実装（Linux版）
+// ============================================================================
+
 namespace pamc204
 {
+    /**
+     * @brief シリアルポート経由でコマンドを送信し、レスポンスを受信する
+     * @param command 送信するコマンド文字列（改行コードは自動付与）
+     * @return 成功時 true、失敗時 false
+     * @note ポートを開く→コマンド送信→レスポンス受信→ポートを閉じる、の一連の処理を行う
+     */
     bool send_command(const std::string &command)
     {
         std::fprintf(stdout, "COMMAND TO EXECUTE: '%s'\n", command.c_str());
@@ -225,6 +256,16 @@ namespace pamc204
         return true;
     }
 
+    /**
+     * @brief 複数のコマンドを1回のポート開閉で順次送信する（効率化版）
+     * @param commands 送信するコマンド文字列の配列
+     * @param responses 各コマンドのレスポンスを格納する配列（出力）
+     * @return 成功時 true、失敗時 false
+     * @note ポートを1回だけ開き、全コマンドを順次送信してから閉じる。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信。
+     *       いずれかのコマンドでエラーが発生した場合は即座に終了。
+     *       4軸同時操作などで複数コマンドを効率的に送信するために使用。
+     */
     bool send_commands_batch(const std::vector<std::string> &commands, std::vector<std::string> &responses)
     {
         responses.clear();

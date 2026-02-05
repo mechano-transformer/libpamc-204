@@ -22,7 +22,7 @@ libpamc-204/
 │   └── pamc204.h               # メインAPI
 ├── src/
 │   ├── core/                   # プラットフォーム非依存コード
-│   │   ├── pamc204.cpp         # 高レベルAPI実装
+│   │   ├── api.cpp             # 高レベルAPI実装
 │   │   ├── utils.cpp           # 共通ユーティリティ
 │   │   └── utils.h             # 内部ヘッダー
 │   └── platform/               # プラットフォーム固有実装
