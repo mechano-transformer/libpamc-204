@@ -74,6 +74,12 @@ lib.pamc204_query_actual_position_all_channels.argtypes = [wintypes.INT, wintype
 lib.pamc204_query_motion_status_all_channels.restype = wintypes.BOOL
 lib.pamc204_query_motion_status_all_channels.argtypes = [wintypes.INT, wintypes.INT * 4]
 
+lib.pamc204_move_infinite_all_channels.restype = wintypes.BOOL
+lib.pamc204_move_infinite_all_channels.argtypes = [wintypes.INT, c_char]
+
+lib.pamc204_stop_motion_all_channels.restype = wintypes.BOOL
+lib.pamc204_stop_motion_all_channels.argtypes = [wintypes.INT]
+
 # テスト対象アドレス（E01）
 address = 1
 
@@ -133,6 +139,11 @@ tests = [
     ("move_relative_all_channels", lambda: lib.pamc204_move_relative_all_channels(address, 500), 2.0),
     ("query_actual_position_all_channels", test_query_actual_position_all_channels, 0),
     ("query_motion_status_all_channels", test_query_motion_status_all_channels, 0),
+    
+    # 4軸同時無限移動と停止テスト
+    ("move_infinite_all_channels", lambda: lib.pamc204_move_infinite_all_channels(address, b"+"), 0.5),
+    ("stop_motion_all_channels", lambda: lib.pamc204_stop_motion_all_channels(address), 0.5),
+    ("query_motion_status_all_channels_after_stop", test_query_motion_status_all_channels, 0),
 ]
 
 # 順に試す
