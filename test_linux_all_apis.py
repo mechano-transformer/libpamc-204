@@ -76,6 +76,25 @@ lib.pamc204_query_motion_status_all_channels.argtypes = [c_int, c_int * 4]
 # テスト対象アドレス
 address = 1  # E01
 
+# 4軸同時操作API用のヘルパー関数
+def test_query_actual_position_all_channels():
+    """全チャンネルの位置を取得して表示"""
+    positions = (c_int * 4)()
+    result = lib.pamc204_query_actual_position_all_channels(address, positions)
+    print(f"  Positions: CH1={positions[0]}, CH2={positions[1]}, CH3={positions[2]}, CH4={positions[3]}")
+    return result
+
+def test_query_motion_status_all_channels():
+    """全チャンネルのモーション状態を取得して表示"""
+    statuses = (c_int * 4)()
+    result = lib.pamc204_query_motion_status_all_channels(address, statuses)
+    print(f"  Statuses:")
+    print(f"    CH1: {'Stopped' if statuses[0] else 'Moving'}")
+    print(f"    CH2: {'Stopped' if statuses[1] else 'Moving'}")
+    print(f"    CH3: {'Stopped' if statuses[2] else 'Moving'}")
+    print(f"    CH4: {'Stopped' if statuses[3] else 'Moving'}")
+    return result
+
 # 呼び出し例をリスト化（BUSYエラーを避けるため、モーション完了を待つ）
 tests = [
     ("send_command_E01INF", lambda: lib.pamc204_send_command(b"E01INF"), 0),
@@ -109,18 +128,8 @@ tests = [
     
     # 4軸同時操作APIテスト
     ("move_relative_all_channels", lambda: lib.pamc204_move_relative_all_channels(address, 500), 2.0),
-    
-    ("query_actual_position_all_channels", lambda: (
-        positions := (c_int * 4)(),
-        lib.pamc204_query_actual_position_all_channels(address, positions),
-        print(f"  Positions: CH1={positions[0]}, CH2={positions[1]}, CH3={positions[2]}, CH4={positions[3]}")
-    )[1], 0),
-    
-    ("query_motion_status_all_channels", lambda: (
-        statuses := (c_int * 4)(),
-        lib.pamc204_query_motion_status_all_channels(address, statuses),
-        print(f"  Statuses: CH1={'停止' if statuses[0] else '駆動中'}, CH2={'停止' if statuses[1] else '駆動中'}, CH3={'停止' if statuses[2] else '駆動中'}, CH4={'停止' if statuses[3] else '駆動中'}")
-    )[1], 0),
+    ("query_actual_position_all_channels", test_query_actual_position_all_channels, 0),
+    ("query_motion_status_all_channels", test_query_motion_status_all_channels, 0),
 ]
 
 # 順に試す
