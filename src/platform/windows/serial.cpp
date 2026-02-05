@@ -1,4 +1,5 @@
 ﻿#include "pamc204.h"
+#include "../serial.h"
 #include "utils.h"
 #include <windows.h>
 #include <setupapi.h>
@@ -10,11 +11,6 @@
 
 // DLL エントリポイント (Windows専用)
 BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }
-
-// --- 共有のヘルパー（serial_common.h にある実装の宣言） ---
-std::string to_upper_ascii(const std::string &s);
-std::string find_error_token(const std::string &resp);
-std::string get_error_description(const std::string &error_token);
 
 // --- ヘルパー ---
 struct HandleGuard

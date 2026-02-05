@@ -1,4 +1,6 @@
 ﻿#include "pamc204.h"
+#include "../serial.h"
+#include "utils.h"
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -8,19 +10,12 @@
 #include <string>
 #include <vector>
 #include <cstdio>
-#include "pamc204.h"
-#include "utils.h"
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
 #include <cstdlib>
 #include <array>
 #include <sstream>
-
-// --- 共有のヘルパー（serial_common.h にある実装の宣言） ---
-std::string to_upper_ascii(const std::string &s);
-std::string find_error_token(const std::string &resp);
-std::string get_error_description(const std::string &error_token);
 
 // Linux: 出力は stdout に行う
 static void output_response(const std::string &resp)
