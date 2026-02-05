@@ -148,31 +148,37 @@ Return value:
 
 ### 📋 Command Reference
 
-| No | Command Format | Usage Example | Description |
-|----|----------------|---------------|-------------|
-| 1 | `ExxINF` | `send_command("E01INF")` | Check firmware version |
-| 2 | `Exx` | `send_command("E01")` | Check device existence |
-| 3 | `SETADDRxx` | `send_command("SETADDR02")` | Change address (to E02) |
-| 4 | `ExxDACnnnn` | `send_command("E01DAC4095")`<br>`send_command("E01DAC1900")` | Adjust drive voltage (150V / 70V)<br>Range: 70V～150V |
-| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `send_command("E01NR15001500A")`<br>`send_command("E01NR1500X100000A")`<br>`send_command("E01NR15000000A")` | Forward rotation drive<br>1500Hz/1500 pulses<br>1500Hz/100000 pulses<br>1500Hz/continuous |
-| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `send_command("E01RR15001500B")`<br>`send_command("E01RR1500X100000B")` | Reverse rotation drive<br>1500Hz/1500 pulses<br>1500Hz/100000 pulses |
-| 7 | `ExxS` | `send_command("E01S")` | Stop pulse drive |
-| 8 | `ExxAB` | `send_command("E01AB")` | Abort motion (immediate stop all CH) |
-| 9 | `ExxmACnnnn` | `send_command("E011AC10000")` | Set acceleration (10000 steps/sec²)<br>Range: 1～150000 |
-| 10 | `ExxmAC?` | `send_command("E011AC?")` | Query acceleration |
-| 11 | `ExxmVAnnnn` | `send_command("E011VA1500")` | Set velocity (1500 steps/sec)<br>Range: 1～1500 |
-| 12 | `ExxmVA?` | `send_command("E011VA?")` | Query velocity |
-| 13 | `ExxmDHnnnn` | `send_command("E011DH0")` | Set home position |
-| 14 | `ExxmDH?` | `send_command("E011DH?")` | Query home position |
-| 15 | `ExxmPAnnnn` | `send_command("E011PA10000")` | Absolute position move (position 10000)<br>Range: -2147483648～+2147483647 |
-| 16 | `ExxmPA?` | `send_command("E011PA?")` | Query absolute position |
-| 17 | `ExxmPRnnnn` | `send_command("E011PR5000")` | Relative position move (+5000) |
-| 18 | `ExxmPR?` | `send_command("E011PR?")` | Query relative position |
-| 19 | `ExxmTP?` | `send_command("E011TP?")` | Query actual position |
-| 20 | `ExxmMD?` | `send_command("E011MD?")` | Check motion status |
-| 21 | `ExxmMVn` | `send_command("E011MV+")` | Infinite move (+ direction)<br>Direction: + or - |
-| 22 | `ExxmMV?` | `send_command("E011MV?")` | Query move direction |
-| 23 | `ExxmST` | `send_command("E011ST")` | Stop motion |
+| No | Command Format | Low-Level API | High-Level API | Description |
+|----|----------------|---------------|----------------|-------------|
+| 1 | `ExxINF` | `send_command("E01INF")` | `get_firmware_version(1)` | Check firmware version |
+| 2 | `Exx` | `send_command("E01")` | `check_device(1)` | Check device existence |
+| 3 | `SETADDRxx` | `send_command("SETADDR02")` | - | Change address (to E02) |
+| 4 | `ExxDACnnnn` | `send_command("E01DAC4095")`<br>`send_command("E01DAC1900")` | `set_voltage(1, 4095)`<br>`set_voltage(1, 1900)` | Adjust drive voltage (150V / 70V)<br>Range: 70V～150V |
+| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `send_command("E01NR15001500A")`<br>`send_command("E01NR1500X100000A")`<br>`send_command("E01NR15000000A")` | `rotate_positive(1, 1500, 1500, 'A')`<br>`rotate_positive(1, 1500, 100000, 'A')`<br>`rotate_positive(1, 1500, 0, 'A')` | Forward rotation drive<br>1500Hz/1500 pulses<br>1500Hz/100000 pulses<br>1500Hz/continuous |
+| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `send_command("E01RR15001500B")`<br>`send_command("E01RR1500X100000B")` | `rotate_negative(1, 1500, 1500, 'B')`<br>`rotate_negative(1, 1500, 100000, 'B')` | Reverse rotation drive<br>1500Hz/1500 pulses<br>1500Hz/100000 pulses |
+| 7 | `ExxS` | `send_command("E01S")` | `stop(1)` | Stop pulse drive |
+| 8 | `ExxAB` | `send_command("E01AB")` | `abort_motion(1)` | Abort motion (immediate stop all CH) |
+| 9 | `ExxmACnnnn` | `send_command("E011AC10000")` | `set_acceleration(1, 1, 10000)` | Set acceleration (10000 steps/sec²)<br>Range: 1～150000 |
+| 10 | `ExxmAC?` | `send_command("E011AC?")` | `query_acceleration(1, 1)` | Query acceleration |
+| 11 | `ExxmVAnnnn` | `send_command("E011VA1500")` | `set_velocity(1, 1, 1500)` | Set velocity (1500 steps/sec)<br>Range: 1～1500 |
+| 12 | `ExxmVA?` | `send_command("E011VA?")` | `query_velocity(1, 1)` | Query velocity |
+| 13 | `ExxmDHnnnn` | `send_command("E011DH0")` | `set_home_position(1, 1, 0)` | Set home position |
+| 14 | `ExxmDH?` | `send_command("E011DH?")` | `query_home_position(1, 1)` | Query home position |
+| 15 | `ExxmPAnnnn` | `send_command("E011PA10000")` | `move_absolute(1, 1, 10000)` | Absolute position move (position 10000)<br>Range: -2147483648～+2147483647 |
+| 16 | `ExxmPA?` | `send_command("E011PA?")` | `query_absolute_position(1, 1)` | Query absolute position |
+| 17 | `ExxmPRnnnn` | `send_command("E011PR5000")` | `move_relative(1, 1, 5000)` | Relative position move (+5000) |
+| 18 | `ExxmPR?` | `send_command("E011PR?")` | `query_relative_position(1, 1)` | Query relative position |
+| 19 | `ExxmTP?` | `send_command("E011TP?")` | `query_actual_position(1, 1)` | Query actual position |
+| 20 | `ExxmMD?` | `send_command("E011MD?")` | `query_motion_status(1, 1)` | Check motion status |
+| 21 | `ExxmMVn` | `send_command("E011MV+")` | `move_infinite(1, 1, '+')` | Infinite move (+ direction)<br>Direction: + or - |
+| 22 | `ExxmMV?` | `send_command("E011MV?")` | `query_move_direction(1, 1)` | Query move direction |
+| 23 | `ExxmST` | `send_command("E011ST")` | `stop_motion(1, 1)` | Stop motion |
+| 24 | - | `send_command_batch({"E01INF", "E01"})`<br>`send_command_batch({"E011AC10000", "E011VA1500"})` | - | Batch command sending (send multiple commands at once) |
+| 25 | - | - | `move_relative_all_channels(1, 500)` | Move all axes relatively (all CH +500) |
+| 26 | - | - | `move_infinite_all_channels(1, '+')` | Move all axes infinitely (all CH + direction) |
+| 27 | - | - | `stop_motion_all_channels(1)` | Stop all axes (all CH) |
+| 28 | - | - | `query_actual_position_all_channels(1, positions)` | Query actual position of all axes (all CH) |
+| 29 | - | - | `query_motion_status_all_channels(1, statuses)` | Check motion status of all axes (all CH) |
 
 **Parameter Descriptions:**
 

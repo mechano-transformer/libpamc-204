@@ -148,31 +148,37 @@ pamc204_send_command("E01INF");
 
 ### 📋 コマンドリファレンス
 
-| No | コマンドフォーマット | 使用例 | 説明 |
-|----|------------------|--------|------|
-| 1 | `ExxINF` | `send_command("E01INF")` | ファームウェアバージョン確認 |
-| 2 | `Exx` | `send_command("E01")` | デバイス存在確認 |
-| 3 | `SETADDRxx` | `send_command("SETADDR02")` | アドレス変更（E02に変更） |
-| 4 | `ExxDACnnnn` | `send_command("E01DAC4095")`<br>`send_command("E01DAC1900")` | 駆動電圧調整（150V / 70V）<br>範囲: 70V～150V |
-| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `send_command("E01NR15001500A")`<br>`send_command("E01NR1500X100000A")`<br>`send_command("E01NR15000000A")` | 正回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス<br>1500Hz/連続 |
-| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `send_command("E01RR15001500B")`<br>`send_command("E01RR1500X100000B")` | 逆回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス |
-| 7 | `ExxS` | `send_command("E01S")` | パルス駆動停止 |
-| 8 | `ExxAB` | `send_command("E01AB")` | モーション停止（全CH即停止） |
-| 9 | `ExxmACnnnn` | `send_command("E011AC10000")` | 加速度設定（10000 steps/sec²）<br>範囲: 1～150000 |
-| 10 | `ExxmAC?` | `send_command("E011AC?")` | 加速度問い合わせ |
-| 11 | `ExxmVAnnnn` | `send_command("E011VA1500")` | 速度設定（1500 steps/sec）<br>範囲: 1～1500 |
-| 12 | `ExxmVA?` | `send_command("E011VA?")` | 速度問い合わせ |
-| 13 | `ExxmDHnnnn` | `send_command("E011DH0")` | ホームポジション設定 |
-| 14 | `ExxmDH?` | `send_command("E011DH?")` | ホームポジション問い合わせ |
-| 15 | `ExxmPAnnnn` | `send_command("E011PA10000")` | 絶対位置移動（位置10000）<br>範囲: -2147483648～+2147483647 |
-| 16 | `ExxmPA?` | `send_command("E011PA?")` | 絶対位置問い合わせ |
-| 17 | `ExxmPRnnnn` | `send_command("E011PR5000")` | 相対位置移動（+5000） |
-| 18 | `ExxmPR?` | `send_command("E011PR?")` | 相対位置問い合わせ |
-| 19 | `ExxmTP?` | `send_command("E011TP?")` | 実位置問い合わせ |
-| 20 | `ExxmMD?` | `send_command("E011MD?")` | 動作状態確認 |
-| 21 | `ExxmMVn` | `send_command("E011MV+")` | 無限移動（+方向）<br>方向: + または - |
-| 22 | `ExxmMV?` | `send_command("E011MV?")` | 移動方向問い合わせ |
-| 23 | `ExxmST` | `send_command("E011ST")` | 動作停止 |
+| No | コマンドフォーマット | 低レベルAPI | 高レベルAPI | 説明 |
+|----|--------------------|-------------|-------------|------|
+| 1 | `ExxINF` | `send_command("E01INF")` | `get_firmware_version(1)` | ファームウェアバージョン確認 |
+| 2 | `Exx` | `send_command("E01")` | `check_device(1)` | デバイス存在確認 |
+| 3 | `SETADDRxx` | `send_command("SETADDR02")` | - | アドレス変更（E02に変更） |
+| 4 | `ExxDACnnnn` | `send_command("E01DAC4095")`<br>`send_command("E01DAC1900")` | `set_voltage(1, 4095)`<br>`set_voltage(1, 1900)` | 駆動電圧調整（150V / 70V）<br>範囲: 70V～150V |
+| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `send_command("E01NR15001500A")`<br>`send_command("E01NR1500X100000A")`<br>`send_command("E01NR15000000A")` | `rotate_positive(1, 1500, 1500, 'A')`<br>`rotate_positive(1, 1500, 100000, 'A')`<br>`rotate_positive(1, 1500, 0, 'A')` | 正回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス<br>1500Hz/連続 |
+| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `send_command("E01RR15001500B")`<br>`send_command("E01RR1500X100000B")` | `rotate_negative(1, 1500, 1500, 'B')`<br>`rotate_negative(1, 1500, 100000, 'B')` | 逆回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス |
+| 7 | `ExxS` | `send_command("E01S")` | `stop(1)` | パルス駆動停止 |
+| 8 | `ExxAB` | `send_command("E01AB")` | `abort_motion(1)` | モーション停止（全CH即停止） |
+| 9 | `ExxmACnnnn` | `send_command("E011AC10000")` | `set_acceleration(1, 1, 10000)` | 加速度設定（10000 steps/sec²）<br>範囲: 1～150000 |
+| 10 | `ExxmAC?` | `send_command("E011AC?")` | `query_acceleration(1, 1)` | 加速度問い合わせ |
+| 11 | `ExxmVAnnnn` | `send_command("E011VA1500")` | `set_velocity(1, 1, 1500)` | 速度設定（1500 steps/sec）<br>範囲: 1～1500 |
+| 12 | `ExxmVA?` | `send_command("E011VA?")` | `query_velocity(1, 1)` | 速度問い合わせ |
+| 13 | `ExxmDHnnnn` | `send_command("E011DH0")` | `set_home_position(1, 1, 0)` | ホームポジション設定 |
+| 14 | `ExxmDH?` | `send_command("E011DH?")` | `query_home_position(1, 1)` | ホームポジション問い合わせ |
+| 15 | `ExxmPAnnnn` | `send_command("E011PA10000")` | `move_absolute(1, 1, 10000)` | 絶対位置移動（位置10000）<br>範囲: -2147483648～+2147483647 |
+| 16 | `ExxmPA?` | `send_command("E011PA?")` | `query_absolute_position(1, 1)` | 絶対位置問い合わせ |
+| 17 | `ExxmPRnnnn` | `send_command("E011PR5000")` | `move_relative(1, 1, 5000)` | 相対位置移動（+5000） |
+| 18 | `ExxmPR?` | `send_command("E011PR?")` | `query_relative_position(1, 1)` | 相対位置問い合わせ |
+| 19 | `ExxmTP?` | `send_command("E011TP?")` | `query_actual_position(1, 1)` | 実位置問い合わせ |
+| 20 | `ExxmMD?` | `send_command("E011MD?")` | `query_motion_status(1, 1)` | 動作状態確認 |
+| 21 | `ExxmMVn` | `send_command("E011MV+")` | `move_infinite(1, 1, '+')` | 無限移動（+方向）<br>方向: + または - |
+| 22 | `ExxmMV?` | `send_command("E011MV?")` | `query_move_direction(1, 1)` | 移動方向問い合わせ |
+| 23 | `ExxmST` | `send_command("E011ST")` | `stop_motion(1, 1)` | 動作停止 |
+| 24 | - | `send_command_batch({"E01INF", "E01"})`<br>`send_command_batch({"E011AC10000", "E011VA1500"})` | - | バッチコマンド送信（複数コマンドを一括送信） |
+| 25 | - | - | `move_relative_all_channels(1, 500)` | 全軸相対移動（全CH +500移動） |
+| 26 | - | - | `move_infinite_all_channels(1, '+')` | 全軸無限移動（全CH +方向） |
+| 27 | - | - | `stop_motion_all_channels(1)` | 全軸停止（全CH停止） |
+| 28 | - | - | `query_actual_position_all_channels(1, positions)` | 全軸実位置問い合わせ（全CH） |
+| 29 | - | - | `query_motion_status_all_channels(1, statuses)` | 全軸動作状態確認（全CH） |
 
 **パラメータ説明:**
 
