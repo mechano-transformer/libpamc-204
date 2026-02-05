@@ -14,7 +14,7 @@ It can be built as a DLL on Windows and as an SO on Linux/WSL2.
 
 ## 📂 Project Structure
 
-```
+```text
 libpamc-204/
 ├── CMakeLists.txt              # Build configuration (Windows/Linux compatible)
 ├── README.md
@@ -22,7 +22,7 @@ libpamc-204/
 │   └── pamc204.h               # Main API
 ├── src/
 │   ├── core/                   # Platform-independent code
-│   │   ├── api.cpp             # High-level API implementation
+│   │   ├── pamc204.cpp         # High-level API implementation
 │   │   ├── utils.cpp           # Common utilities
 │   │   └── utils.h             # Internal header
 │   └── platform/               # Platform-specific implementations

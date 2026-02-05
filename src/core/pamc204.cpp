@@ -1,6 +1,8 @@
 ﻿#include "pamc204.h"
 #include <cstdio>
 #include <string>
+#include <chrono>
+#include <thread>
 
 // ============================================================================
 // C++ 高レベルAPI実装
@@ -191,12 +193,19 @@ namespace pamc204
     bool move_relative_all_channels(int address, int position)
     {
         // 全軸に同じ相対位置を設定
+        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
         for (int ch = 1; ch <= 4; ch++)
         {
             if (!move_relative(address, ch, position))
             {
-                std::fprintf(stderr, "move_relative_all_channels: Failed at axis %d\n", ch);
-                return false; // エラーが発生した場合は即座に終了
+                std::fprintf(stderr, "move_relative_all_channels: Failed at axis %d (timeout or error)\n", ch);
+                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
+            }
+            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
+            // デバイスが確実に処理を完了できるようにする
+            if (ch < 4)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         }
         return true;
@@ -205,14 +214,18 @@ namespace pamc204
     bool query_actual_position_all_channels(int address, int positions[4])
     {
         // 各軸の実位置を順次問い合わせ
-        // 注: 実際のレスポンス解析はserial.cpp内で行われるため、
-        // ここでは単にコマンドを送信するのみ
+        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
         for (int ch = 1; ch <= 4; ch++)
         {
             if (!query_actual_position(address, ch))
             {
-                std::fprintf(stderr, "query_actual_position_all_channels: Failed at axis %d\n", ch);
-                return false; // エラーが発生した場合は即座に終了
+                std::fprintf(stderr, "query_actual_position_all_channels: Failed at axis %d (timeout or error)\n", ch);
+                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
+            }
+            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
+            if (ch < 4)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         }
         return true;
@@ -221,14 +234,18 @@ namespace pamc204
     bool query_motion_status_all_channels(int address, int statuses[4])
     {
         // 各軸の動作状態を順次問い合わせ
-        // 注: 実際のレスポンス解析はserial.cpp内で行われるため、
-        // ここでは単にコマンドを送信するのみ
+        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
         for (int ch = 1; ch <= 4; ch++)
         {
             if (!query_motion_status(address, ch))
             {
-                std::fprintf(stderr, "query_motion_status_all_channels: Failed at axis %d\n", ch);
-                return false; // エラーが発生した場合は即座に終了
+                std::fprintf(stderr, "query_motion_status_all_channels: Failed at axis %d (timeout or error)\n", ch);
+                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
+            }
+            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
+            if (ch < 4)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         }
         return true;
@@ -237,12 +254,18 @@ namespace pamc204
     bool move_infinite_all_channels(int address, char direction)
     {
         // 全軸を同じ方向に無限移動
+        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
         for (int ch = 1; ch <= 4; ch++)
         {
             if (!move_infinite(address, ch, direction))
             {
-                std::fprintf(stderr, "move_infinite_all_channels: Failed at axis %d\n", ch);
-                return false; // エラーが発生した場合は即座に終了
+                std::fprintf(stderr, "move_infinite_all_channels: Failed at axis %d (timeout or error)\n", ch);
+                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
+            }
+            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
+            if (ch < 4)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         }
         return true;
@@ -251,12 +274,18 @@ namespace pamc204
     bool stop_motion_all_channels(int address)
     {
         // 全軸の動作を停止
+        // 各コマンド送信後、レスポンスを受信してから次のコマンドを送信
         for (int ch = 1; ch <= 4; ch++)
         {
             if (!stop_motion(address, ch))
             {
-                std::fprintf(stderr, "stop_motion_all_channels: Failed at axis %d\n", ch);
-                return false; // エラーが発生した場合は即座に終了
+                std::fprintf(stderr, "stop_motion_all_channels: Failed at axis %d (timeout or error)\n", ch);
+                return false; // タイムアウトまたはエラーが発生した場合は即座に終了
+            }
+            // レスポンス受信完了後、次のコマンド送信前に短い待機時間を設ける
+            if (ch < 4)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         }
         return true;

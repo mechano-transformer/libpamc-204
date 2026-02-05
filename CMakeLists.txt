@@ -13,7 +13,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/core)
 # コアソース（プラットフォーム非依存）
 set(CORE_SRC
     src/core/utils.cpp
-    src/core/api.cpp
+    src/core/pamc204.cpp
 )
 
 # プラットフォーム固有のソース

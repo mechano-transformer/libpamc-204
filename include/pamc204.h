@@ -196,7 +196,10 @@ namespace pamc204
      * @param address ドライバアドレス（1-32）
      * @param position 全チャンネルに適用する相対位置
      * @return 成功時 true、失敗時 false
-     * @note 全チャンネルに対して同じ相対位置でExxmPRnnnnコマンドを順次実行
+     * @note 全チャンネルに対して同じ相対位置でExxmPRnnnnコマンドを順次実行します。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信します。
+     *       レスポンスが返ってこない場合は2秒でタイムアウトし、falseを返します。
+     *       各コマンド間には50msの待機時間を設けています。
      */
     bool move_relative_all_channels(int address, int position);
 
@@ -205,7 +208,10 @@ namespace pamc204
      * @param address ドライバアドレス（1-32）
      * @param positions 各チャンネルの実位置を格納する配列[4]
      * @return 成功時 true、失敗時 false
-     * @note 各チャンネルに対してExxmTP?コマンドを順次実行
+     * @note 各チャンネルに対してExxmTP?コマンドを順次実行します。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信します。
+     *       レスポンスが返ってこない場合は2秒でタイムアウトし、falseを返します。
+     *       各コマンド間には50msの待機時間を設けています。
      */
     bool query_actual_position_all_channels(int address, int positions[4]);
 
@@ -214,7 +220,10 @@ namespace pamc204
      * @param address ドライバアドレス（1-32）
      * @param statuses 各チャンネルの状態を格納する配列[4]（0=駆動中、1=停止）
      * @return 成功時 true、失敗時 false
-     * @note 各チャンネルに対してExxmMD?コマンドを順次実行
+     * @note 各チャンネルに対してExxmMD?コマンドを順次実行します。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信します。
+     *       レスポンスが返ってこない場合は2秒でタイムアウトし、falseを返します。
+     *       各コマンド間には50msの待機時間を設けています。
      */
     bool query_motion_status_all_channels(int address, int statuses[4]);
 
@@ -223,7 +232,10 @@ namespace pamc204
      * @param address ドライバアドレス（1-32）
      * @param direction 移動方向（'+' または '-'）
      * @return 成功時 true、失敗時 false
-     * @note 全チャンネルに対して同じ方向でExxmMVnコマンドを順次実行
+     * @note 全チャンネルに対して同じ方向でExxmMVnコマンドを順次実行します。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信します。
+     *       レスポンスが返ってこない場合は2秒でタイムアウトし、falseを返します。
+     *       各コマンド間には50msの待機時間を設けています。
      */
     bool move_infinite_all_channels(int address, char direction);
 
@@ -231,7 +243,10 @@ namespace pamc204
      * @brief 4チャンネル同時動作停止
      * @param address ドライバアドレス（1-32）
      * @return 成功時 true、失敗時 false
-     * @note 全チャンネルに対してExxmSTコマンドを順次実行
+     * @note 全チャンネルに対してExxmSTコマンドを順次実行します。
+     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信します。
+     *       レスポンスが返ってこない場合は2秒でタイムアウトし、falseを返します。
+     *       各コマンド間には50msの待機時間を設けています。
      */
     bool stop_motion_all_channels(int address);
 }

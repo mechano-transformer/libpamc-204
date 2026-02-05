@@ -14,7 +14,7 @@ Windows では DLL、Linux/WSL2 では SO としてビルドできます。
 
 ## 📂 プロジェクト構成
 
-```
+```text
 libpamc-204/
 ├── CMakeLists.txt              # ビルド設定（Windows/Linux両対応）
 ├── README.md
@@ -22,7 +22,7 @@ libpamc-204/
 │   └── pamc204.h               # メインAPI
 ├── src/
 │   ├── core/                   # プラットフォーム非依存コード
-│   │   ├── api.cpp             # 高レベルAPI実装
+│   │   ├── pamc204.cpp         # 高レベルAPI実装
 │   │   ├── utils.cpp           # 共通ユーティリティ
 │   │   └── utils.h             # 内部ヘッダー
 │   └── platform/               # プラットフォーム固有実装
