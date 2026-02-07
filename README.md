@@ -11,6 +11,7 @@ Windows では DLL、Linux/WSL2 では SO としてビルドできます。
 - **Windows**
   - Visual Studio 2022 または VSCode + CMake Tools
   - CMake (3.10以上)
+  ※ ビルドにはVisualStudioのインストールが必須です
 
 ## 📂 プロジェクト構成
 
@@ -53,6 +54,7 @@ cmake --build .
 ### Windows
 
 ```powershell
+# VisualStudioをインストールしていること
 cd libpamc-204
 mkdir build
 cd build
