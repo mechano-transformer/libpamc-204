@@ -1,7 +1,7 @@
 ﻿from ctypes import WinDLL, c_char_p
 from ctypes import wintypes
 
-lib = WinDLL("./build/Debug/pamc204.dll", use_last_error=True)
+lib = WinDLL("./pamc204.dll", use_last_error=True)
 
 # C APIの関数を取得
 send_command = lib.pamc204_send_command

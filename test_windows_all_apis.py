@@ -4,7 +4,7 @@ from ctypes import wintypes
 import time
 
 # DLLをロード（cdecl 前提。stdcall の場合は WinDLL に切り替え）
-lib = CDLL("./build/Debug/pamc204.dll")
+lib = CDLL("./pamc204.dll")
 
 # API群のシグネチャ定義（port 引数をすべて削除）
 lib.pamc204_send_command.restype = wintypes.BOOL
