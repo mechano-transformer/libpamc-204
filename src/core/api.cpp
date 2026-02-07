@@ -247,7 +247,7 @@ namespace pamc204
     /**
      * @brief 4軸同時実位置問い合わせの実装
      * @note 各軸に対してExxmTP?コマンドを生成し、バッチ送信
-     *       レスポンスは標準出力に表示される（positions配列への格納は未実装）
+     *       レスポンスをパースしてpositions配列に格納
      */
     bool query_actual_position_all_channels(int address, int positions[4])
     {
@@ -268,8 +268,23 @@ namespace pamc204
             return false;
         }
 
-        // TODO: レスポンスから位置情報を抽出してpositions配列に格納
-        // 現時点ではレスポンスは標準出力に表示される
+        // レスポンスから位置情報を抽出してpositions配列に格納
+        // レスポンス形式: 数値文字列（例: "1000", "-500"）
+        for (size_t i = 0; i < responses.size() && i < 4; i++)
+        {
+            const std::string &resp = responses[i];
+            try
+            {
+                positions[i] = std::stoi(resp);
+            }
+            catch (...)
+            {
+                // パースエラーまたは未接続の場合は0を設定
+                positions[i] = 0;
+                std::fprintf(stderr, "query_actual_position_all_channels: Invalid response for CH%zu: '%s'\n",
+                             i + 1, resp.c_str());
+            }
+        }
 
         return true;
     }
@@ -277,7 +292,7 @@ namespace pamc204
     /**
      * @brief 4軸同時動作状態確認の実装
      * @note 各軸に対してExxmMD?コマンドを生成し、バッチ送信
-     *       レスポンスは標準出力に表示される（statuses配列への格納は未実装）
+     *       レスポンスをパースしてstatuses配列に格納（0=駆動中、1=停止）
      */
     bool query_motion_status_all_channels(int address, int statuses[4])
     {
@@ -298,8 +313,24 @@ namespace pamc204
             return false;
         }
 
-        // TODO: レスポンスから状態情報を抽出してstatuses配列に格納
-        // 現時点ではレスポンスは標準出力に表示される
+        // レスポンスから状態情報を抽出してstatuses配列に格納
+        // レスポンス形式: "0" (駆動中) または "1" (停止)
+        for (size_t i = 0; i < responses.size() && i < 4; i++)
+        {
+            const std::string &resp = responses[i];
+            // レスポンスから数値を抽出（0 or 1）
+            if (!resp.empty() && (resp[0] == '0' || resp[0] == '1'))
+            {
+                statuses[i] = resp[0] - '0';
+            }
+            else
+            {
+                // パースエラーまたは未接続の場合は-1を設定
+                statuses[i] = -1;
+                std::fprintf(stderr, "query_motion_status_all_channels: Invalid response for CH%zu: '%s'\n",
+                             i + 1, resp.c_str());
+            }
+        }
 
         return true;
     }
