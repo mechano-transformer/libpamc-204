@@ -64,9 +64,9 @@ cmake --build . --config Release
 
 生成物:
 
-- `build\Debug\pamc204.dll` (DLL本体)
-- `build\Debug\pamc204.lib` (インポートライブラリ)
-- `build\Debug\test_serial.exe` (動作確認用実行ファイル)
+- `build\Release\pamc204.dll` (DLL本体)
+- `build\Release\pamc204.lib` (インポートライブラリ)
+- `build\Release\test_serial.exe` (動作確認用実行ファイル)
 
 ## ▶️ 使い方
 
@@ -214,7 +214,7 @@ sudo ./test_serial "E01INF"
 ### Windows
 
 ```powershell
-.\Debug\test_serial.exe "E01INF"
+.\Release\test_serial.exe "E01INF"
 ```
 
 ※ `usbipd`でWSLにattachしてるときはdetatchすること
