@@ -95,10 +95,15 @@ def test_query_motion_status_all_channels():
     statuses = (c_int * 4)()
     result = lib.pamc204_query_motion_status_all_channels(address, statuses)
     print(f"  Statuses:")
-    print(f"    CH1: {'Stopped' if statuses[0] else 'Moving'}")
-    print(f"    CH2: {'Stopped' if statuses[1] else 'Moving'}")
-    print(f"    CH3: {'Stopped' if statuses[2] else 'Moving'}")
-    print(f"    CH4: {'Stopped' if statuses[3] else 'Moving'}")
+    # レスポンス: 0=駆動中(Moving), 1=停止(Stopped), -1=エラー/未接続
+    for i in range(4):
+        if statuses[i] == 1:
+            status_str = "Stopped"
+        elif statuses[i] == 0:
+            status_str = "Moving"
+        else:
+            status_str = "Error/Disconnected"
+        print(f"    CH{i+1}: {status_str} (value={statuses[i]})")
     return result
 
 # 呼び出し例をリスト化（BUSYエラーを避けるため、モーション完了を待つ）
