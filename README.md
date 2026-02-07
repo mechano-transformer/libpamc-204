@@ -56,8 +56,8 @@ cmake --build .
 cd libpamc-204
 mkdir build
 cd build
-cmake ..
-cmake --build .
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --config Release
 ```
 
 生成物:

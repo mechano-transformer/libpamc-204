@@ -23,20 +23,26 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+        shell: bash
 
       - name: Build
         run: |
           cd build
-          cmake --build .
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmake --build . --config Release
+          else
+            cmake --build .
+          fi
+        shell: bash
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-artifacts
           path: |
+            build/Release/pamc204.dll
             build/libpamc204.so
-            build/**/pamc204.dll
           if-no-files-found: error
 
   release:
@@ -52,6 +58,6 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/* 
+          files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
