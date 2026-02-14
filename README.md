@@ -276,3 +276,14 @@ git tag -d v1.0.0                  # ローカルのタグを削除
 git tag v1.0.0                     # 再度タグを作成
 git push origin v1.0.0             # タグをpush
 ```
+
+### C++のオートフォーマット
+
+```bash
+# インストール
+sudo apt install clang-format
+
+# 実行
+cd libpamc-204
+clang-format -i src/**/*.cpp
+```
