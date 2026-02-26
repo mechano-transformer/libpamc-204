@@ -1,12 +1,12 @@
 #include "pamc204.h"
 #include "utils.h"
-#include <cstdio>
+#include <windows.h>
 #include <initguid.h>
 #include <devguid.h>
 #include <setupapi.h>
+#include <cstdio>
 #include <string>
 #include <vector>
-#include <windows.h>
 
 /**
  * @brief DLLエントリポイント（Windows専用）
