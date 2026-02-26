@@ -485,16 +485,15 @@ class ADCGUI(tk.Tk):
             messagebox.showerror("Error", "Please connect to PAMC-204 first.")
             return
         ch = self.axis_var.get()
-        positions = self.pamc.query_actual_position_all_channels()
-        if positions is not None:
-            pos = positions[ch - 1]  # ch は 1-indexed
+        pos = self.pamc.query_actual_position(ch)
+        if pos is not None:
             self.lbl_position.config(text=f"Position ch{ch}: {pos}")
-            self.lbl_status.config(text=f"ch1={positions[0]}, ch2={positions[1]}")
-            print(f"[PAMC204] query_actual_position_all_channels: {positions}")
+            self.lbl_status.config(text=f"ch{ch} = {pos}")
+            print(f"[PAMC204] query_actual_position ch{ch}: {pos}")
         else:
             self.lbl_position.config(text=f"Position ch{ch}: FAIL")
             self.lbl_status.config(text="query failed")
-            print(f"[PAMC204] query_actual_position_all_channels failed")
+            print(f"[PAMC204] query_actual_position ch{ch} failed")
 
     # ================================================================
     # 表示更新

@@ -94,7 +94,7 @@ python main.py --dll ./pamc204.dll
 | Move (Rel) | 入力パルス数だけ相対移動 |
 | Move (Abs) | 指定絶対位置へ移動 |
 | Stop | 動作停止 |
-| Position? | 現在位置を問い合わせ |
+| Position? | 現在位置を問い合わせて表示 |
 
 ### 4. ADC（自動ドリフト補正）
 
@@ -142,22 +142,3 @@ python main.py --dll ./pamc204.dll
 | Reverse Axis 1 | 軸1のパルス方向を反転 |
 | Reverse Axis 2 | 軸2のパルス方向を反転 |
 | Swap X/Y Axes | X/Y 軸の割り当てを入れ替え（デフォルト: X→ch2, Y→ch1） |
-
----
-
-## 既知の制約（PAMC-204 コマンド仕様による）
-
-以下の制約は PAMC-204 本体のコマンド仕様に起因するものです。
-
-### 単チャンネル問い合わせ API は数値を返さない
-
-`pamc204_query_actual_position(addr, ch)` および `pamc204_query_motion_status(addr, ch)` は、コマンド送信の成否を示す `BOOL` 値のみを返します。コントローラーからの応答数値（位置・状態）は Python 側に渡されません。
-
-このため、位置数値の取得や動作完了ポーリングには **全チャンネル版 API** を使用しています：
-
-| 用途 | 使用 API |
-| --- | --- |
-| 「Position?」ボタンの位置数値表示 | `pamc204_query_actual_position_all_channels(addr, positions[4])` |
-| `wait_for_stop()` の完了待ちポーリング | `pamc204_query_motion_status_all_channels(addr, statuses[4])` |
-
-`statuses[ch-1] == 1`（Stopped）になるまで最大 5 秒間ポーリングします。

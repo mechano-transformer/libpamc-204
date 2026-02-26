@@ -3,7 +3,7 @@ PAMC-204 DLL (pamc204.dll) の Python ラッパー
 Windows 前提: test_windows_all_apis.py と同じシグネチャ定義を使用
 """
 import ctypes
-from ctypes import wintypes, c_char_p, c_char, POINTER
+from ctypes import wintypes, c_char_p, c_char, c_int
 import os
 import time
 
@@ -44,9 +44,10 @@ def _load_pamc204_dll(dll_path: str | None = None):
 
 
 def _setup_signatures(lib):
-    """ctypes 関数シグネチャを設定する（test_windows_all_apis.py と同じ定義）。"""
+    """ctypes 関数シグネチャを設定する。"""
+    # 低レベルAPI: out_response バッファ付き
     lib.pamc204_send_command.restype  = wintypes.BOOL
-    lib.pamc204_send_command.argtypes = [c_char_p]
+    lib.pamc204_send_command.argtypes = [c_char_p, c_char_p, c_int]
 
     lib.pamc204_get_firmware_version.restype  = wintypes.BOOL
     lib.pamc204_get_firmware_version.argtypes = [wintypes.INT]
@@ -60,32 +61,51 @@ def _setup_signatures(lib):
     lib.pamc204_set_acceleration.restype  = wintypes.BOOL
     lib.pamc204_set_acceleration.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
 
+    # query系: 値を int で直接返す（失敗時は -1 または INT_MIN）
+    lib.pamc204_query_acceleration.restype  = c_int
+    lib.pamc204_query_acceleration.argtypes = [wintypes.INT, wintypes.INT]
+
     lib.pamc204_set_velocity.restype  = wintypes.BOOL
     lib.pamc204_set_velocity.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
+
+    lib.pamc204_query_velocity.restype  = c_int
+    lib.pamc204_query_velocity.argtypes = [wintypes.INT, wintypes.INT]
+
+    lib.pamc204_set_home_position.restype  = wintypes.BOOL
+    lib.pamc204_set_home_position.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
+
+    lib.pamc204_query_home_position.restype  = c_int
+    lib.pamc204_query_home_position.argtypes = [wintypes.INT, wintypes.INT]
 
     lib.pamc204_move_absolute.restype  = wintypes.BOOL
     lib.pamc204_move_absolute.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
 
+    lib.pamc204_query_absolute_position.restype  = c_int
+    lib.pamc204_query_absolute_position.argtypes = [wintypes.INT, wintypes.INT]
+
     lib.pamc204_move_relative.restype  = wintypes.BOOL
     lib.pamc204_move_relative.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
 
-    lib.pamc204_query_actual_position.restype  = wintypes.BOOL
+    lib.pamc204_query_relative_position.restype  = c_int
+    lib.pamc204_query_relative_position.argtypes = [wintypes.INT, wintypes.INT]
+
+    lib.pamc204_query_actual_position.restype  = c_int
     lib.pamc204_query_actual_position.argtypes = [wintypes.INT, wintypes.INT]
 
-    lib.pamc204_query_motion_status.restype  = wintypes.BOOL
+    lib.pamc204_query_motion_status.restype  = c_int
     lib.pamc204_query_motion_status.argtypes = [wintypes.INT, wintypes.INT]
 
     lib.pamc204_move_infinite.restype  = wintypes.BOOL
     lib.pamc204_move_infinite.argtypes = [wintypes.INT, wintypes.INT, c_char]
+
+    lib.pamc204_query_move_direction.restype  = c_char
+    lib.pamc204_query_move_direction.argtypes = [wintypes.INT, wintypes.INT]
 
     lib.pamc204_stop_motion.restype  = wintypes.BOOL
     lib.pamc204_stop_motion.argtypes = [wintypes.INT, wintypes.INT]
 
     lib.pamc204_abort_motion.restype  = wintypes.BOOL
     lib.pamc204_abort_motion.argtypes = [wintypes.INT]
-
-    lib.pamc204_set_home_position.restype  = wintypes.BOOL
-    lib.pamc204_set_home_position.argtypes = [wintypes.INT, wintypes.INT, wintypes.INT]
 
     lib.pamc204_stop_motion_all_channels.restype  = wintypes.BOOL
     lib.pamc204_stop_motion_all_channels.argtypes = [wintypes.INT]
@@ -99,6 +119,9 @@ def _setup_signatures(lib):
 
 # モジュールロード時に DLL を読み込む（パス未指定 = 自動検索）
 pamc204_lib = _load_pamc204_dll()
+
+# INT_MIN: query系の失敗時戻り値
+_INT_MIN = -2147483648
 
 
 class PAMC204:
@@ -183,16 +206,26 @@ class PAMC204:
         return bool(self.lib.pamc204_set_home_position(self.address, channel, position))
 
     def query_actual_position(self, channel):
-        """実位置問い合わせ（ExxmTP?）。例: E011TP?"""
+        """実位置問い合わせ（ExxmTP?）。例: E011TP?
+
+        Returns:
+            int | None: 実位置。失敗時（INT_MIN）は None。
+        """
         if not self.is_connected:
-            return False
-        return bool(self.lib.pamc204_query_actual_position(self.address, channel))
+            return None
+        val = self.lib.pamc204_query_actual_position(self.address, channel)
+        return None if val == _INT_MIN else val
 
     def query_motion_status(self, channel):
-        """動作状態確認（ExxmMD?）。例: E011MD?"""
+        """動作状態確認（ExxmMD?）。例: E011MD?
+
+        Returns:
+            int | None: 0=動作中(Moving), 1=停止(Stopped)。失敗時（-1）は None。
+        """
         if not self.is_connected:
-            return False
-        return bool(self.lib.pamc204_query_motion_status(self.address, channel))
+            return None
+        val = self.lib.pamc204_query_motion_status(self.address, channel)
+        return None if val == -1 else val
 
     def stop_motion(self, channel):
         """動作停止（ExxmST）。例: E011ST"""
@@ -237,9 +270,9 @@ class PAMC204:
         return None
 
     def wait_for_stop(self, channel, poll_interval=0.05, timeout=5.0):
-        """動作完了待ち（ExxmMD? × 4ch でポーリング）。
+        """動作完了待ち（ExxmMD? でポーリング）。
 
-        pamc204_query_motion_status_all_channels を使って指定チャンネルの
+        pamc204_query_motion_status を使って指定チャンネルの
         停止状態（status == 1）を確認するまでポーリングする。
 
         Args:
@@ -251,14 +284,8 @@ class PAMC204:
             return True
         deadline = time.time() + timeout
         while time.time() < deadline:
-            statuses = self.query_motion_status_all_channels()
-            if statuses is None:
-                # 取得失敗時は固定待機してリトライ
-                time.sleep(poll_interval)
-                continue
-            # statuses は 0-indexed: channel 1 → index 0
-            idx = channel - 1
-            if 0 <= idx < len(statuses) and statuses[idx] == 1:
+            status = self.query_motion_status(channel)
+            if status == 1:
                 return True  # 停止確認
             time.sleep(poll_interval)
         print(f"[PAMC204] wait_for_stop: timeout waiting for ch{channel} to stop")
