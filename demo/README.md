@@ -147,25 +147,17 @@ python main.py --dll ./pamc204.dll
 
 ## 既知の制約（PAMC-204 コマンド仕様による）
 
-以下の制約は PAMC-204 本体のコマンド仕様に起因するものであり、DLL・ソフトウェア側での回避は困難です。
+以下の制約は PAMC-204 本体のコマンド仕様に起因するものです。
 
-### 1. 「Position?」ボタンで実際の位置数値を表示できない
+### 単チャンネル問い合わせ API は数値を返さない
 
-**原因**: PAMC-204 の実位置問い合わせコマンド `ExxmTP?` は、コントローラーがシリアルポートに位置数値を返す仕様です。
-しかし pamc204.dll の `pamc204_query_actual_position(addr, ch)` は、コマンド送信の成否を示す `BOOL` 値のみを返し、**コントローラーからの応答文字列（位置数値）を Python 側に渡しません**。
+`pamc204_query_actual_position(addr, ch)` および `pamc204_query_motion_status(addr, ch)` は、コマンド送信の成否を示す `BOOL` 値のみを返します。コントローラーからの応答数値（位置・状態）は Python 側に渡されません。
 
-**影響**: GUI の「Position?」ボタンを押しても、実際の位置数値ではなく `"Position query ch{n}: OK/FAIL"` という成否メッセージのみが表示されます。
+このため、位置数値の取得や動作完了ポーリングには **全チャンネル版 API** を使用しています：
 
-**回避策**: 位置数値を取得したい場合は、`pamc204_send_command` 低レベル API を使用するか、シリアルポートを直接操作してください。
+| 用途 | 使用 API |
+| --- | --- |
+| 「Position?」ボタンの位置数値表示 | `pamc204_query_actual_position_all_channels(addr, positions[4])` |
+| `wait_for_stop()` の完了待ちポーリング | `pamc204_query_motion_status_all_channels(addr, statuses[4])` |
 
----
-
-### 2. モーター動作完了の確実な検出ができない
-
-**原因**: PAMC-204 の動作状態確認コマンド `ExxmMD?` は、コントローラーが動作中（`1`）か停止中（`0`）かを示す文字列を返す仕様です。
-しかし pamc204.dll の `pamc204_query_motion_status(addr, ch)` は `BOOL` 値のみを返すため、**停止状態（`0`）と動作中（`1`）を Python 側で区別できません**。
-
-**影響**: `wait_for_stop()` は `pamc204_query_motion_status` を送信後に固定時間（50 ms）待機するだけであり、モーターが実際に停止したことを確認してから次のコマンドを送る「完了待ちポーリング」ができません。
-高速連続移動や大きなパルス数の移動では、前の動作が完了する前に次のコマンドが送られる可能性があります。
-
-**回避策**: ADC の `Sample Period (s)` を十分大きく設定（例: 0.5 秒以上）することで、実用上の問題を回避できます。
+`statuses[ch-1] == 1`（Stopped）になるまで最大 5 秒間ポーリングします。
