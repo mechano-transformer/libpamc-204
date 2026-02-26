@@ -440,6 +440,9 @@ class ADCGUI(tk.Tk):
             messagebox.showerror("Error", "Invalid pulse count.")
             return
         ch = self.axis_var.get()
+        # swap_axes が有効な場合は軸番号を入れ替える
+        if self.swap_axes:
+            ch = 2 if ch == 1 else 1
         if ch == 1 and self.reverse_axis1:
             pulses = -pulses
         elif ch == 2 and self.reverse_axis2:
@@ -460,6 +463,9 @@ class ADCGUI(tk.Tk):
             messagebox.showerror("Error", "Invalid position value.")
             return
         ch = self.axis_var.get()
+        # swap_axes が有効な場合は軸番号を入れ替える
+        if self.swap_axes:
+            ch = 2 if ch == 1 else 1
         ok = self.pamc.move_absolute(ch, pos)
         print(f"[PAMC204] move_absolute ch{ch} pos={pos}: {'OK' if ok else 'FAIL'}")
         if ok:
