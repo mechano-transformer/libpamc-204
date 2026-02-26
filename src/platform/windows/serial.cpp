@@ -1,12 +1,12 @@
 ﻿#include "pamc204.h"
 #include "utils.h"
-#include <windows.h>
-#include <setupapi.h>
-#include <initguid.h>
+#include <cstdio>
 #include <devguid.h>
+#include <initguid.h>
+#include <setupapi.h>
 #include <string>
 #include <vector>
-#include <cstdio>
+#include <windows.h>
 
 /**
  * @brief DLLエントリポイント（Windows専用）
@@ -69,7 +69,8 @@ static std::wstring to_wstring_utf8(const std::string &s)
  */
 static HANDLE open_port(const std::wstring &portPath)
 {
-    return CreateFileW(portPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    return CreateFileW(portPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                       FILE_ATTRIBUTE_NORMAL, NULL);
 }
 
 /**
@@ -152,7 +153,8 @@ static bool write_command_to_port(HANDLE h, const char *command)
  * @return 受信したレスポンス文字列
  * @note ポーリング方式でデータを読み取り、アイドル時間が経過したら読み取りを終了
  */
-static std::string read_response_from_port(HANDLE h, DWORD totalTimeoutMs = 2000, DWORD idleTimeoutMs = 200, DWORD bufSize = 1024)
+static std::string read_response_from_port(HANDLE h, DWORD totalTimeoutMs = 2000,
+                                           DWORD idleTimeoutMs = 200, DWORD bufSize = 1024)
 {
     std::string response;
     if (!h || h == INVALID_HANDLE_VALUE)
@@ -267,8 +269,8 @@ static std::string detect_port_name(const std::string &vid = "0403",
     for (DWORD i = 0; SetupDiEnumDeviceInfo(hDevInfo, i, &devInfoData); i++)
     {
         char hwidBuf[1024];
-        if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &devInfoData, SPDRP_HARDWAREID,
-                                               NULL, (PBYTE)hwidBuf, sizeof(hwidBuf), NULL))
+        if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &devInfoData, SPDRP_HARDWAREID, NULL,
+                                               (PBYTE)hwidBuf, sizeof(hwidBuf), NULL))
         {
             continue;
         }
@@ -281,16 +283,16 @@ static std::string detect_port_name(const std::string &vid = "0403",
         }
 
         // VID/PID一致 → レジストリから COMポート名を取得
-        HKEY hKey = SetupDiOpenDevRegKey(hDevInfo, &devInfoData,
-                                         DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);
+        HKEY hKey =
+            SetupDiOpenDevRegKey(hDevInfo, &devInfoData, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);
         if (hKey == INVALID_HANDLE_VALUE)
             continue;
 
         char portName[256];
         DWORD size = sizeof(portName);
         DWORD type = 0;
-        if (RegQueryValueExA(hKey, "PortName", NULL, &type,
-                             (LPBYTE)portName, &size) == ERROR_SUCCESS)
+        if (RegQueryValueExA(hKey, "PortName", NULL, &type, (LPBYTE)portName, &size) ==
+            ERROR_SUCCESS)
         {
             RegCloseKey(hKey);
             SetupDiDestroyDeviceInfoList(hDevInfo);
@@ -309,205 +311,188 @@ static std::string detect_port_name(const std::string &vid = "0403",
 
 namespace pamc204
 {
-    /**
-     * @brief シリアルポート経由でコマンドを送信し、レスポンスを受信する
-     * @param command 送信するコマンド文字列（改行コードは自動付与）
-     * @return 成功時 true、失敗時 false
-     * @note ポートを開く→コマンド送信→レスポンス受信→ポートを閉じる、の一連の処理を行う
-     */
-    bool send_command(const std::string &command)
+/**
+ * @brief シリアルポート経由でコマンドを送信し、レスポンスを受信する
+ * @param command 送信するコマンド文字列（改行コードは自動付与）
+ * @return レスポンス文字列。失敗時または空レスポンス時は空文字列。
+ * @note ポートを開く→コマンド送信→レスポンス受信→ポートを閉じる、の一連の処理を行う
+ */
+std::string send_command(const std::string &command)
+{
+    std::fprintf(stdout, "COMMAND TO EXECUTE: '%s'\n", command.c_str());
+
+    // 自動検出
+    std::string com = detect_port_name(); // 例: "COM3"
+    std::fprintf(stdout, "PORT NAME: '%s'\n", com.c_str());
+    if (com.empty())
     {
-        std::fprintf(stdout, "COMMAND TO EXECUTE: '%s'\n", command.c_str());
+        std::fprintf(stderr, "No PAMC204 device found\n");
+        return std::string();
+    }
 
-        // 自動検出
-        std::string com = detect_port_name(); // 例: "COM3"
-        std::fprintf(stdout, "PORT NAME: '%s'\n", com.c_str());
-        if (com.empty())
-        {
-            std::fprintf(stderr, "No PAMC204 device found\n");
-            return false;
-        }
+    // "\\.\COMx" へ正規化して開く
+    std::wstring wcom = to_wstring_utf8(com);
+    std::wstring path = normalize_port_name_w(wcom.c_str());
+    HandleGuard hg(open_port(path));
+    if (!hg.valid())
+    {
+        std::fprintf(stderr, "open failed on %s\n", com.c_str());
+        return std::string();
+    }
 
-        // "\\.\COMx" へ正規化して開く
-        std::wstring wcom = to_wstring_utf8(com);
-        std::wstring path = normalize_port_name_w(wcom.c_str());
-        HandleGuard hg(open_port(path));
-        if (!hg.valid())
-        {
-            std::fprintf(stderr, "open failed on %s\n", com.c_str());
-            return false;
-        }
+    if (!configure_port(hg.h))
+    {
+        std::fprintf(stderr, "configure_port failed\n");
+        return std::string();
+    }
 
-        if (!configure_port(hg.h))
-        {
-            std::fprintf(stderr, "configure_port failed\n");
-            return false;
-        }
+    if (!write_command_to_port(hg.h, command.c_str()))
+    {
+        std::fprintf(stderr, "write failed\n");
+        return std::string();
+    }
 
-        if (!write_command_to_port(hg.h, command.c_str()))
-        {
-            std::fprintf(stderr, "write failed\n");
-            return false;
-        }
+    std::string resp = read_response_from_port(hg.h);
+    if (resp.empty())
+    {
+        std::fprintf(stderr, "read timeout or empty response\n");
+        return std::string();
+    }
 
-        std::string resp = read_response_from_port(hg.h);
-        if (!resp.empty())
+    std::string token = find_error_token(resp);
+    if (!token.empty())
+    {
+        std::string description = get_error_description(token);
+        std::string errLine = "ERROR: " + token + " - " + description + "\r\n";
+        DWORD wrote = 0;
+        HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hStdOut != NULL && hStdOut != INVALID_HANDLE_VALUE)
         {
-            std::string token = find_error_token(resp);
-            if (!token.empty())
-            {
-                std::string description = get_error_description(token);
-                std::string errLine = "ERROR: " + token + " - " + description + "\r\n";
-                DWORD wrote = 0;
-                HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-                if (hStdOut != NULL && hStdOut != INVALID_HANDLE_VALUE)
-                {
-                    DWORD type = GetFileType(hStdOut);
-                    if (type == FILE_TYPE_CHAR)
-                    {
-                        WriteConsoleA(hStdOut, errLine.c_str(), (DWORD)errLine.size(), &wrote, NULL);
-                    }
-                    else
-                    {
-                        WriteFile(hStdOut, errLine.data(), (DWORD)errLine.size(), &wrote, NULL);
-                    }
-                }
-                else
-                {
-                    OutputDebugStringA(errLine.c_str());
-                }
-                OutputDebugStringA(resp.c_str());
-                SetLastError(ERROR_INVALID_DATA);
-                return false;
-            }
-            output_response_once(resp);
+            DWORD type = GetFileType(hStdOut);
+            if (type == FILE_TYPE_CHAR)
+                WriteConsoleA(hStdOut, errLine.c_str(), (DWORD)errLine.size(), &wrote, NULL);
+            else
+                WriteFile(hStdOut, errLine.data(), (DWORD)errLine.size(), &wrote, NULL);
         }
         else
         {
-            std::fprintf(stderr, "read timeout or empty response\n");
+            OutputDebugStringA(errLine.c_str());
         }
-        return true;
+        OutputDebugStringA(resp.c_str());
     }
-
-    /**
-     * @brief 複数のコマンドを1回のポート開閉で順次送信する（効率化版）
-     * @param commands 送信するコマンド文字列の配列
-     * @param responses 各コマンドのレスポンスを格納する配列（出力）
-     * @return 成功時 true、失敗時 false
-     * @note ポートを1回だけ開き、全コマンドを順次送信してから閉じる。
-     *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信。
-     *       いずれかのコマンドでエラーが発生した場合は即座に終了。
-     *       4軸同時操作などで複数コマンドを効率的に送信するために使用。
-     */
-    bool send_commands_batch(const std::vector<std::string> &commands, std::vector<std::string> &responses)
+    else
     {
-        responses.clear();
-        if (commands.empty())
-        {
-            std::fprintf(stderr, "send_commands_batch: no commands provided\n");
-            return false;
-        }
-
-        std::fprintf(stdout, "BATCH COMMAND: %zu commands\n", commands.size());
-
-        // 自動検出
-        std::string com = detect_port_name(); // 例: "COM3"
-        std::fprintf(stdout, "PORT NAME: '%s'\n", com.c_str());
-        if (com.empty())
-        {
-            std::fprintf(stderr, "No PAMC204 device found\n");
-            return false;
-        }
-
-        // "\\.\COMx" へ正規化して開く（1回のみ）
-        std::wstring wcom = to_wstring_utf8(com);
-        std::wstring path = normalize_port_name_w(wcom.c_str());
-        HandleGuard hg(open_port(path));
-        if (!hg.valid())
-        {
-            std::fprintf(stderr, "open failed on %s\n", com.c_str());
-            return false;
-        }
-
-        if (!configure_port(hg.h))
-        {
-            std::fprintf(stderr, "configure_port failed\n");
-            return false;
-        }
-
-        // 各コマンドを順次送信
-        for (size_t i = 0; i < commands.size(); i++)
-        {
-            const std::string &command = commands[i];
-            std::fprintf(stdout, "COMMAND[%zu]: '%s'\n", i + 1, command.c_str());
-
-            // 書き込み
-            if (!write_command_to_port(hg.h, command.c_str()))
-            {
-                std::fprintf(stderr, "write failed at command %zu\n", i + 1);
-                return false;
-            }
-
-            // 読み取り
-            std::string resp = read_response_from_port(hg.h);
-            if (resp.empty())
-            {
-                std::fprintf(stderr, "read timeout or empty response at command %zu\n", i + 1);
-                return false;
-            }
-
-            // エラーチェック
-            std::string token = find_error_token(resp);
-            if (!token.empty())
-            {
-                std::string description = get_error_description(token);
-                std::string errLine = "ERROR at command " + std::to_string(i + 1) + ": " + token + " - " + description + "\r\n";
-                DWORD wrote = 0;
-                HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-                if (hStdOut != NULL && hStdOut != INVALID_HANDLE_VALUE)
-                {
-                    DWORD type = GetFileType(hStdOut);
-                    if (type == FILE_TYPE_CHAR)
-                    {
-                        WriteConsoleA(hStdOut, errLine.c_str(), (DWORD)errLine.size(), &wrote, NULL);
-                    }
-                    else
-                    {
-                        WriteFile(hStdOut, errLine.data(), (DWORD)errLine.size(), &wrote, NULL);
-                    }
-                }
-                else
-                {
-                    OutputDebugStringA(errLine.c_str());
-                }
-                OutputDebugStringA(resp.c_str());
-                SetLastError(ERROR_INVALID_DATA);
-                return false;
-            }
-
-            // レスポンスを保存して出力
-            responses.push_back(resp);
-            output_response_once(resp);
-
-            // 次のコマンド送信前に短い待機時間を設ける
-            if (i < commands.size() - 1)
-            {
-                Sleep(50);
-            }
-        }
-
-        // ポートを閉じる（HandleGuardのデストラクタで自動的に閉じられる）
-        return true;
+        output_response_once(resp);
     }
+    return resp;
 }
 
-// C API エクスポート用ラッパー（cmdのみ）
-extern "C" bool send_command(const char *command)
+/**
+ * @brief 複数のコマンドを1回のポート開閉で順次送信する（効率化版）
+ * @param commands 送信するコマンド文字列の配列
+ * @return 各コマンドのレスポンス文字列の配列。
+ *         失敗時（ポートオープン失敗・書き込み失敗等）は空の vector を返す。
+ * @note ポートを1回だけ開き、全コマンドを順次送信してから閉じる。
+ *       各コマンド送信後、レスポンスを受信してから次のコマンドを送信。
+ *       いずれかのコマンドでエラーが発生した場合は即座に終了。
+ */
+std::vector<std::string> send_commands_batch(const std::vector<std::string> &commands)
 {
-    if (!command)
+    if (commands.empty())
     {
-        std::fprintf(stderr, "send_command: invalid arguments\n");
-        return false;
+        std::fprintf(stderr, "send_commands_batch: no commands provided\n");
+        return {};
     }
-    return pamc204::send_command(std::string(command));
+
+    std::fprintf(stdout, "BATCH COMMAND: %zu commands\n", commands.size());
+
+    // 自動検出
+    std::string com = detect_port_name(); // 例: "COM3"
+    std::fprintf(stdout, "PORT NAME: '%s'\n", com.c_str());
+    if (com.empty())
+    {
+        std::fprintf(stderr, "No PAMC204 device found\n");
+        return {};
+    }
+
+    // "\\.\COMx" へ正規化して開く（1回のみ）
+    std::wstring wcom = to_wstring_utf8(com);
+    std::wstring path = normalize_port_name_w(wcom.c_str());
+    HandleGuard hg(open_port(path));
+    if (!hg.valid())
+    {
+        std::fprintf(stderr, "open failed on %s\n", com.c_str());
+        return {};
+    }
+
+    if (!configure_port(hg.h))
+    {
+        std::fprintf(stderr, "configure_port failed\n");
+        return {};
+    }
+
+    std::vector<std::string> responses;
+    responses.reserve(commands.size());
+
+    // 各コマンドを順次送信
+    for (size_t i = 0; i < commands.size(); i++)
+    {
+        const std::string &command = commands[i];
+        std::fprintf(stdout, "COMMAND[%zu]: '%s'\n", i + 1, command.c_str());
+
+        // 書き込み
+        if (!write_command_to_port(hg.h, command.c_str()))
+        {
+            std::fprintf(stderr, "write failed at command %zu\n", i + 1);
+            return {};
+        }
+
+        // 読み取り
+        std::string resp = read_response_from_port(hg.h);
+        if (resp.empty())
+        {
+            std::fprintf(stderr, "read timeout or empty response at command %zu\n", i + 1);
+            return {};
+        }
+
+        // エラーチェック（出力のみ、継続）
+        std::string token = find_error_token(resp);
+        if (!token.empty())
+        {
+            std::string description = get_error_description(token);
+            std::string errLine = "ERROR at command " + std::to_string(i + 1) + ": " + token +
+                                  " - " + description + "\r\n";
+            DWORD wrote = 0;
+            HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (hStdOut != NULL && hStdOut != INVALID_HANDLE_VALUE)
+            {
+                DWORD type = GetFileType(hStdOut);
+                if (type == FILE_TYPE_CHAR)
+                    WriteConsoleA(hStdOut, errLine.c_str(), (DWORD)errLine.size(), &wrote, NULL);
+                else
+                    WriteFile(hStdOut, errLine.data(), (DWORD)errLine.size(), &wrote, NULL);
+            }
+            else
+            {
+                OutputDebugStringA(errLine.c_str());
+            }
+            OutputDebugStringA(resp.c_str());
+        }
+        else
+        {
+            output_response_once(resp);
+        }
+
+        responses.push_back(resp);
+
+        // 次のコマンド送信前に短い待機時間を設ける
+        if (i < commands.size() - 1)
+        {
+            Sleep(50);
+        }
+    }
+
+    // ポートを閉じる（HandleGuardのデストラクタで自動的に閉じられる）
+    return responses;
 }
+} // namespace pamc204

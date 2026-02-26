@@ -19,6 +19,8 @@ Windows では DLL、Linux/WSL2 では SO としてビルドできます。
 libpamc-204/
 ├── CMakeLists.txt              # ビルド設定（Windows/Linux両対応）
 ├── README.md
+├── docs/
+│   └── API.md                  # API一覧・使用例
 ├── include/                    # 公開ヘッダ
 │   └── pamc204.h               # メインAPI
 ├── src/
@@ -31,6 +33,8 @@ libpamc-204/
 │       │   └── serial.cpp      # Windows実装（Win32 API）
 │       └── linux/
 │           └── serial.cpp      # Linux実装（termios）
+├── tests/                      # ユニットテスト
+│   └── test_api_unit.py        # send_command / send_commands_batch ユニットテスト
 └── demo/                       # サンプルコード
     └── main.cpp
 ```
@@ -72,125 +76,94 @@ cmake --build . --config Release
 
 ### 🎯 高レベルAPI（推奨）
 
-個別コマンド専用関数を使用する方法：
+個別コマンド専用関数を使用する方法。詳細は [docs/API.md](docs/API.md) を参照。
 
 ```cpp
 #include "pamc204.h"
 
 // C++ API（名前空間で保護）
-pamc204::get_firmware_version(1);           // E01INF
-pamc204::check_device(1);                   // E01
-pamc204::set_voltage(1, 4095);              // E01DAC4095 (150V)
-pamc204::rotate_positive(1, 1500, 1000, 'A'); // E01NR15001000A
-pamc204::stop(1);                           // E01S
-pamc204::set_acceleration(1, 1, 10000);     // E011AC10000
-pamc204::query_acceleration(1, 1);          // E011AC?
-pamc204::set_velocity(1, 1, 1500);          // E011VA1500
-pamc204::move_absolute(1, 1, 10000);        // E011PA10000
-pamc204::move_relative(1, 1, 5000);         // E011PR5000
-pamc204::query_actual_position(1, 1);       // E011TP?
-pamc204::move_infinite(1, 1, '+');          // E011MV+
-pamc204::stop_motion(1, 1);                 // E011ST
-pamc204::abort_motion(1);                   // E01AB
+std::string resp = pamc204::get_firmware_version(1);  // E01INF → レスポンス文字列
+pamc204::check_device(1);                              // E01
+pamc204::set_voltage(1, 4095);                         // E01DAC4095 (150V)
+pamc204::rotate_positive(1, 1500, 1000, 'A');          // E01NR15001000A
+pamc204::stop(1);                                      // E01S
+pamc204::set_acceleration(1, 1, 10000);                // E011AC10000
+int acc = pamc204::query_acceleration(1, 1);           // E011AC? → int値（失敗時 -1）
+pamc204::set_velocity(1, 1, 1500);                     // E011VA1500
+pamc204::move_absolute(1, 1, 10000);                   // E011PA10000
+pamc204::move_relative(1, 1, 5000);                    // E011PR5000
+int pos = pamc204::query_actual_position(1, 1);        // E011TP? → int値（失敗時 INT_MIN）
+int status = pamc204::query_motion_status(1, 1);       // E011MD? → 0=動作中, 1=停止, -1=失敗
+pamc204::move_infinite(1, 1, '+');                     // E011MV+
+pamc204::stop_motion(1, 1);                            // E011ST
+pamc204::abort_motion(1);                              // E01AB
 
-// 4軸同時操作（DLLレベル拡張）
-pamc204::move_relative_all_channels(1, 500);  // 全軸を+500移動
-pamc204::move_infinite_all_channels(1, '+');  // 全軸を+方向に無限移動
-pamc204::stop_motion_all_channels(1);         // 全軸の動作を停止
-int actual_positions[4];
-pamc204::query_actual_position_all_channels(1, actual_positions);
-int statuses[4];
-pamc204::query_motion_status_all_channels(1, statuses);
+// 4軸同時操作（send_commands_batch を使用して1回のポート開閉で送信）
+std::vector<std::string> resps = pamc204::move_relative_all_channels(1, 500);
+std::vector<int> positions     = pamc204::query_actual_position_all_channels(1);
+std::vector<int> statuses      = pamc204::query_motion_status_all_channels(1);
+pamc204::move_infinite_all_channels(1, '+');
+pamc204::stop_motion_all_channels(1);
 
-// C API（pamc204_プレフィックスで保護）
+// C API（pamc204_プレフィックス）
 pamc204_get_firmware_version(1);
-pamc204_check_device(1);
-pamc204_set_voltage(1, 4095);
-pamc204_rotate_positive(1, 1500, 1000, 'A');
-pamc204_stop(1);
 pamc204_set_acceleration(1, 1, 10000);
-pamc204_query_acceleration(1, 1);
-pamc204_set_velocity(1, 1, 1500);
-pamc204_move_absolute(1, 1, 10000);
-pamc204_move_relative(1, 1, 5000);
-pamc204_query_actual_position(1, 1);
-pamc204_move_infinite(1, 1, '+');
-pamc204_stop_motion(1, 1);
-pamc204_abort_motion(1);
-
-// 4軸同時操作（DLLレベル拡張）
-pamc204_move_relative_all_channels(1, 500);
-pamc204_move_infinite_all_channels(1, '+');
-pamc204_stop_motion_all_channels(1);
-int actual_positions[4];
-pamc204_query_actual_position_all_channels(1, actual_positions);
-int statuses[4];
-pamc204_query_motion_status_all_channels(1, statuses);
+int acc2 = pamc204_query_acceleration(1, 1);    // int値を直接返す
+int pos2 = pamc204_query_actual_position(1, 1); // int値を直接返す
+int st2  = pamc204_query_motion_status(1, 1);   // int値を直接返す
 ```
 
-### � 低レベルAPI
+### 🔩 低レベルAPI
 
 汎用コマンド送信（柔軟性が高い）：
 
 ```cpp
 #include "pamc204.h"
 
-// C++ API
-pamc204::send_command("E01INF");
-pamc204::send_command("E01NR15001000A");
+// C++ API: レスポンス文字列を返す
+std::string resp = pamc204::send_command("E01INF");
+if (!resp.empty()) { /* 成功 */ }
 
-// C API
-pamc204_send_command("E01INF");
+// 複数コマンドを1回のポート開閉で送信
+auto resps = pamc204::send_commands_batch({"E011AC?", "E011VA?", "E011TP?"});
+if (!resps.empty()) {
+    // resps[0] = 加速度, resps[1] = 速度, resps[2] = 実位置
+}
+
+// C API: 成功/失敗を bool で返す（レスポンスはバッファに格納）
+char buf[256] = {};
+bool ok = pamc204_send_command("E01INF", buf, sizeof(buf));
 ```
-
-戻り値:
-
-- `true`: 成功
-- `false`: エラー
 
 ### 📋 コマンドリファレンス
 
-| No | コマンドフォーマット | 低レベルAPI | 高レベルAPI | 説明 |
-|----|--------------------|-------------|-------------|------|
-| 1 | `ExxINF` | `send_command("E01INF")` | `get_firmware_version(1)` | ファームウェアバージョン確認 |
-| 2 | `Exx` | `send_command("E01")` | `check_device(1)` | デバイス存在確認 |
-| 3 | `SETADDRxx` | `send_command("SETADDR02")` | - | アドレス変更（E02に変更） |
-| 4 | `ExxDACnnnn` | `send_command("E01DAC4095")`<br>`send_command("E01DAC1900")` | `set_voltage(1, 4095)`<br>`set_voltage(1, 1900)` | 駆動電圧調整（150V / 70V）<br>範囲: 70V～150V |
-| 5 | `ExxNRnnnnyyyyz`<br>`ExxNRnnnnXyyyyyyz` | `send_command("E01NR15001500A")`<br>`send_command("E01NR1500X100000A")`<br>`send_command("E01NR15000000A")` | `rotate_positive(1, 1500, 1500, 'A')`<br>`rotate_positive(1, 1500, 100000, 'A')`<br>`rotate_positive(1, 1500, 0, 'A')` | 正回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス<br>1500Hz/連続 |
-| 6 | `ExxRRnnnnyyyyz`<br>`ExxRRnnnnXyyyyyyz` | `send_command("E01RR15001500B")`<br>`send_command("E01RR1500X100000B")` | `rotate_negative(1, 1500, 1500, 'B')`<br>`rotate_negative(1, 1500, 100000, 'B')` | 逆回転駆動<br>1500Hz/1500パルス<br>1500Hz/100000パルス |
-| 7 | `ExxS` | `send_command("E01S")` | `stop(1)` | パルス駆動停止 |
-| 8 | `ExxAB` | `send_command("E01AB")` | `abort_motion(1)` | モーション停止（全CH即停止） |
-| 9 | `ExxmACnnnn` | `send_command("E011AC10000")` | `set_acceleration(1, 1, 10000)` | 加速度設定（10000 steps/sec²）<br>範囲: 1～150000 |
-| 10 | `ExxmAC?` | `send_command("E011AC?")` | `query_acceleration(1, 1)` | 加速度問い合わせ |
-| 11 | `ExxmVAnnnn` | `send_command("E011VA1500")` | `set_velocity(1, 1, 1500)` | 速度設定（1500 steps/sec）<br>範囲: 1～1500 |
-| 12 | `ExxmVA?` | `send_command("E011VA?")` | `query_velocity(1, 1)` | 速度問い合わせ |
-| 13 | `ExxmDHnnnn` | `send_command("E011DH0")` | `set_home_position(1, 1, 0)` | ホームポジション設定 |
-| 14 | `ExxmDH?` | `send_command("E011DH?")` | `query_home_position(1, 1)` | ホームポジション問い合わせ |
-| 15 | `ExxmPAnnnn` | `send_command("E011PA10000")` | `move_absolute(1, 1, 10000)` | 絶対位置移動（位置10000）<br>範囲: -2147483648～+2147483647 |
-| 16 | `ExxmPA?` | `send_command("E011PA?")` | `query_absolute_position(1, 1)` | 絶対位置問い合わせ |
-| 17 | `ExxmPRnnnn` | `send_command("E011PR5000")` | `move_relative(1, 1, 5000)` | 相対位置移動（+5000） |
-| 18 | `ExxmPR?` | `send_command("E011PR?")` | `query_relative_position(1, 1)` | 相対位置問い合わせ |
-| 19 | `ExxmTP?` | `send_command("E011TP?")` | `query_actual_position(1, 1)` | 実位置問い合わせ |
-| 20 | `ExxmMD?` | `send_command("E011MD?")` | `query_motion_status(1, 1)` | 動作状態確認 |
-| 21 | `ExxmMVn` | `send_command("E011MV+")` | `move_infinite(1, 1, '+')` | 無限移動（+方向）<br>方向: + または - |
-| 22 | `ExxmMV?` | `send_command("E011MV?")` | `query_move_direction(1, 1)` | 移動方向問い合わせ |
-| 23 | `ExxmST` | `send_command("E011ST")` | `stop_motion(1, 1)` | 動作停止 |
-| 24 | - | `send_command_batch({"E01INF", "E01"})`<br>`send_command_batch({"E011AC10000", "E011VA1500"})` | - | バッチコマンド送信（複数コマンドを一括送信） |
-| 25 | - | - | `move_relative_all_channels(1, 500)` | 全軸相対移動（全CH +500移動） |
-| 26 | - | - | `move_infinite_all_channels(1, '+')` | 全軸無限移動（全CH +方向） |
-| 27 | - | - | `stop_motion_all_channels(1)` | 全軸停止（全CH停止） |
-| 28 | - | - | `query_actual_position_all_channels(1, positions)` | 全軸実位置問い合わせ（全CH） |
-| 29 | - | - | `query_motion_status_all_channels(1, statuses)` | 全軸動作状態確認（全CH） |
+詳細は [docs/API.md](docs/API.md) を参照。
 
-**パラメータ説明:**
-
-- `xx`: アドレス（01～32）
-- `nnnn`: 周波数（1～1500 Hz）、加速度、速度、位置など
-- `yyyy`: パルス数（0000～9999、0000=連続）
-- `Xyyyyyy`: 拡張パルス数（X000001～X999999）
-- `z`: チャンネル（A=CH1, B=CH2, C=CH3, D=CH4）
-- `m`: チャンネル番号（1～4）
-- `n`: 方向（+ または -）
+| No | コマンドフォーマット | 高レベルAPI（C++） | 説明 |
+|----|--------------------|--------------------|------|
+| 1 | `ExxINF` | `get_firmware_version(1)` → `string` | ファームウェアバージョン確認 |
+| 2 | `Exx` | `check_device(1)` → `string` | デバイス存在確認 |
+| 3 | `SETADDRxx` | `set_address(2)` → `string` | アドレス変更 |
+| 4 | `ExxDACnnnn` | `set_voltage(1, 4095)` → `string` | 駆動電圧設定（70V〜150V） |
+| 5 | `ExxNRnnnnyyyyz` | `rotate_positive(1, 1500, 1000, 'A')` → `string` | 正回転駆動 |
+| 6 | `ExxRRnnnnyyyyz` | `rotate_negative(1, 1500, 1000, 'A')` → `string` | 逆回転駆動 |
+| 7 | `ExxS` | `stop(1)` → `string` | パルス駆動停止 |
+| 8 | `ExxAB` | `abort_motion(1)` → `string` | モーション停止（全CH即停止） |
+| 9 | `ExxmACnnnn` | `set_acceleration(1, 1, 10000)` → `string` | 加速度設定 |
+| 10 | `ExxmAC?` | `query_acceleration(1, 1)` → `int` | 加速度問い合わせ（失敗時 -1） |
+| 11 | `ExxmVAnnnn` | `set_velocity(1, 1, 1500)` → `string` | 速度設定 |
+| 12 | `ExxmVA?` | `query_velocity(1, 1)` → `int` | 速度問い合わせ（失敗時 -1） |
+| 13 | `ExxmDHnnnn` | `set_home_position(1, 1, 0)` → `string` | ホームポジション設定 |
+| 14 | `ExxmDH?` | `query_home_position(1, 1)` → `int` | ホームポジション問い合わせ（失敗時 INT_MIN） |
+| 15 | `ExxmPAnnnn` | `move_absolute(1, 1, 10000)` → `string` | 絶対位置移動 |
+| 16 | `ExxmPA?` | `query_absolute_position(1, 1)` → `int` | 絶対位置問い合わせ（失敗時 INT_MIN） |
+| 17 | `ExxmPRnnnn` | `move_relative(1, 1, 5000)` → `string` | 相対位置移動 |
+| 18 | `ExxmPR?` | `query_relative_position(1, 1)` → `int` | 相対位置問い合わせ（失敗時 INT_MIN） |
+| 19 | `ExxmTP?` | `query_actual_position(1, 1)` → `int` | 実位置問い合わせ（失敗時 INT_MIN） |
+| 20 | `ExxmMD?` | `query_motion_status(1, 1)` → `int` | 動作状態確認（0=動作中, 1=停止, -1=失敗） |
+| 21 | `ExxmMVn` | `move_infinite(1, 1, '+')` → `string` | 無限移動 |
+| 22 | `ExxmMV?` | `query_move_direction(1, 1)` → `char` | 移動方向問い合わせ（失敗時 '\0'） |
+| 23 | `ExxmST` | `stop_motion(1, 1)` → `string` | 動作停止 |
 
 ### エラーメッセージ
 
@@ -233,6 +206,12 @@ sudo python3 test_linux_all_apis.py
 ```powershell
 # Windows
 python3 test_windows_all_apis.py 
+```
+
+### ユニットテスト（モック使用・デバイス不要）
+
+```bash
+python3 -m pytest tests/test_api_unit.py -v
 ```
 
 ## 🧪 テスト記録
