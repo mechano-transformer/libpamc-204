@@ -1,36 +1,67 @@
 """
-メイン GUI クラス（PAMC-204 対応）
+メイン GUI クラス（PAMC-204 / PAMC-104/204 対応）
 オートコリメータ読み取り・ピエゾモーター制御・ADC を統合した tkinter アプリ。
 
 元の AC_Piezo_AutoAlign_Demo.py から分割・移植。
-ピエゾモーター制御は PAMC-204 DLL（pamc204_wrapper.py）を使用。
+ピエゾモーター制御は mode 引数で切り替え:
+  "pamc204"     : PAMC-204 DLL（pamc204_wrapper.py）を使用（デフォルト）
+  "pamc104_204" : PAMC-104/204 send_command ベース（pamc104_204_wrapper.py）を使用
 """
 import sys
 import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from datetime import datetime
+from enum import Enum
 
 import serial
 import serial.tools.list_ports
 
 from .pamc204_wrapper import PAMC204
+from .pamc104_204_wrapper import PAMC104_204
 from .ac_thread import AcThread
 from .adc_thread import ADCControlThread
 from .position_routine import PositionRoutineThread
 
 
+class PiezoMode(str, Enum):
+    """ピエゾモーター制御モード。
+
+    str を継承しているため argparse / 文字列比較と透過的に使用できる。
+    """
+    PAMC204     = "pamc204"      # PAMC-204 DLL 経由（デフォルト）
+    PAMC104_204 = "pamc104_204"  # PAMC-104/204 send_command 経由
+
+    @classmethod
+    def from_str(cls, value: str) -> "PiezoMode":
+        """文字列から PiezoMode を返す。一致しない場合は ValueError。"""
+        try:
+            return cls(value.lower())
+        except ValueError:
+            valid = ", ".join(f'"{m.value}"' for m in cls)
+            raise ValueError(f"Invalid mode: {value!r}. Choose from {valid}") from None
+
+    @property
+    def label(self) -> str:
+        """GUI 表示用ラベル文字列。"""
+        return "PAMC-104/204" if self is PiezoMode.PAMC104_204 else "PAMC-204"
+
+
 class ADCGUI(tk.Tk):
-    """オートコリメータ & PAMC-204 ピエゾモーター アライメント GUI。
+    """オートコリメータ & ピエゾモーター アライメント GUI。
 
     Args:
         dll_path: pamc204.dll のパスを明示指定する場合に渡す。
                   None の場合は自動検索（build/Release/pamc204.dll など）。
+        mode:     ピエゾモーター制御モード（文字列または PiezoMode）。
+                  "pamc204"     … PAMC-204 DLL 経由（デフォルト）
+                  "pamc104_204" … PAMC-104/204 send_command 経由
     """
 
-    def __init__(self, dll_path: str | None = None):
+    def __init__(self, dll_path: str | None = None, mode: str | PiezoMode = "pamc204"):
         super().__init__()
         self._dll_path = dll_path
+        self._mode: PiezoMode = PiezoMode.from_str(str(mode)) if not isinstance(mode, PiezoMode) else mode
 
         # ── オートコリメータ ──────────────────────────────────────
         self.AC = serial.Serial(baudrate=38400, timeout=0.1, write_timeout=0.1)
@@ -51,8 +82,11 @@ class ADCGUI(tk.Tk):
         self.unitvalues = ["min", "deg", "mdeg", "urad"]
         self.current_unit = "mdeg"
 
-        # ── PAMC-204 ──────────────────────────────────────────────
-        self.pamc = PAMC204(address=1, dll_path=self._dll_path)
+        # ── ピエゾモーターコントローラー（モードで切り替え）────────
+        if self._mode is PiezoMode.PAMC104_204:
+            self.pamc = PAMC104_204(address=1, dll_path=self._dll_path)
+        else:
+            self.pamc = PAMC204(address=1, dll_path=self._dll_path)
 
         # ── ADC 制御 ──────────────────────────────────────────────
         self.ADC_worker = None
@@ -76,7 +110,7 @@ class ADCGUI(tk.Tk):
         self.swap_axes: bool = False
 
         # ── ウィンドウ設定 ────────────────────────────────────────
-        self.title("Autocollimator & PAMC-204 Alignment Demo")
+        self.title(f"Autocollimator & {self._mode.label} Alignment Demo")
         self.geometry("1400x800")
 
         # ── レイアウト ────────────────────────────────────────────
@@ -87,7 +121,9 @@ class ADCGUI(tk.Tk):
         self.ac_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         self._setup_autocollimator_tab()
 
-        self.piezo_frame = tk.LabelFrame(main_container, text="PAMC-204 Piezo Motor Control", padx=10, pady=10)
+        self.piezo_frame = tk.LabelFrame(
+            main_container, text=f"{self._mode.label} Piezo Motor Control", padx=10, pady=10
+        )
         self.piezo_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
         self._setup_piezo_tab()
 
@@ -179,9 +215,11 @@ class ADCGUI(tk.Tk):
         self._refresh_ac_ports()
 
     def _setup_piezo_tab(self):
-        """PAMC-204 接続・手動操作パネル。"""
+        """ピエゾモーター接続・手動操作パネル（モードで表示を切り替え）。"""
+        lbl = self._mode.label
+
         # ── 接続 ──
-        connect_frame = tk.LabelFrame(self.piezo_frame, text="PAMC-204 Connection", padx=10, pady=10)
+        connect_frame = tk.LabelFrame(self.piezo_frame, text=f"{lbl} Connection", padx=10, pady=10)
         connect_frame.pack(pady=10, fill=tk.X)
 
         addr_row = tk.Frame(connect_frame)
@@ -192,8 +230,8 @@ class ADCGUI(tk.Tk):
 
         btn_row = tk.Frame(connect_frame)
         btn_row.pack(fill=tk.X, pady=5)
-        tk.Button(btn_row, text="Connect PAMC-204", command=self._connect_pamc, width=18).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_row, text="Disconnect",        command=self._disconnect_pamc, width=12).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_row, text=f"Connect {lbl}", command=self._connect_pamc, width=20).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_row, text="Disconnect",      command=self._disconnect_pamc, width=12).pack(side=tk.LEFT, padx=5)
 
         self.pamc_status_label = tk.Label(connect_frame, text="Status: Not connected", fg="red")
         self.pamc_status_label.pack(anchor="w", pady=2)
@@ -400,23 +438,27 @@ class ADCGUI(tk.Tk):
     # ================================================================
 
     def _connect_pamc(self):
+        lbl = self._mode.label
         try:
             address = int(self.pamc_address_var.get())
         except ValueError:
-            messagebox.showerror("Error", "Invalid PAMC-204 address.")
+            messagebox.showerror("Error", f"Invalid {lbl} address.")
             return
-        self.pamc = PAMC204(address=address, dll_path=self._dll_path)
+        if self._mode is PiezoMode.PAMC104_204:
+            self.pamc = PAMC104_204(address=address, dll_path=self._dll_path)
+        else:
+            self.pamc = PAMC204(address=address, dll_path=self._dll_path)
         ok = self.pamc.connect()
         if ok:
             self.pamc_status_label.config(text=f"Status: Connected (addr={address})", fg="green")
         else:
             self.pamc_status_label.config(text="Status: Connection failed", fg="red")
-            messagebox.showerror("Error", f"PAMC-204 not found at address {address}.")
+            messagebox.showerror("Error", f"{lbl} not found at address {address}.")
 
     def _disconnect_pamc(self):
         self.pamc.disconnect()
         self.pamc_status_label.config(text="Status: Disconnected", fg="red")
-        print("[PAMC204] Disconnected")
+        print(f"[{self._mode.label}] Disconnected")
 
     # ================================================================
     # ピエゾ手動操作
@@ -587,7 +629,7 @@ class ADCGUI(tk.Tk):
             messagebox.showerror("Error", "Please connect to autocollimator first.")
             return
         if not self.pamc.is_connected:
-            messagebox.showerror("Error", "Please connect to PAMC-204 first.")
+            messagebox.showerror("Error", f"Please connect to {self._mode.label} first.")
             return
         if not self.worker or not self.worker.running:
             messagebox.showerror("Error", "Please start reading from autocollimator first.")
@@ -650,7 +692,7 @@ class ADCGUI(tk.Tk):
             messagebox.showerror("Error", "Please connect to autocollimator first.")
             return
         if not self.pamc.is_connected:
-            messagebox.showerror("Error", "Please connect to PAMC-204 first.")
+            messagebox.showerror("Error", f"Please connect to {self._mode.label} first.")
             return
         if not self.worker or not self.worker.running:
             messagebox.showerror("Error", "Please start reading from autocollimator first.")
@@ -750,12 +792,12 @@ class ADCGUI(tk.Tk):
         # ADC フラグをリセット
         self.ADC_active = False
 
-        for name, device in [("autocollimator", self.AC), ("PAMC-204", None)]:
+        for name, device in [("autocollimator", self.AC), ("piezo controller", None)]:
             try:
                 if name == "autocollimator" and device and device.is_open:
                     print("Closing autocollimator connection...")
                     device.close()
-                elif name == "PAMC-204":
+                elif name == "piezo controller":
                     self.pamc.disconnect()
             except Exception as e:
                 print(f"Error closing {name}: {e}")

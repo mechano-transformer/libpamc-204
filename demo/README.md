@@ -1,7 +1,12 @@
-# Autocollimator & PAMC-204 Alignment Demo
+# Autocollimator & Piezo Motor Alignment Demo
 
-オートコリメータ（自動準直器）と PAMC-204 ピエゾモーターコントローラーを組み合わせた、
+オートコリメータ（自動準直器）とピエゾモーターコントローラーを組み合わせた、
 **自動ドリフト補正（ADC: Automated Drift Correction）** デモアプリケーションです。
+
+対応コントローラー:
+
+- **PAMC-204**（DLL 経由、デフォルト）
+- **PAMC-104 / PAMC-204**（`pamc204_send_command` 経由、`--mode pamc104_204`）
 
 ---
 
@@ -9,7 +14,7 @@
 
 ![GUI スクリーンショット](window.png)
 
-画面は左から **Autocollimator**・**PAMC-204 Piezo Motor Control**・**Automated Drift Correction (ADC)** の3パネル構成です。
+画面は左から **Autocollimator**・**Piezo Motor Control**・**Automated Drift Correction (ADC)** の3パネル構成です。
 
 ---
 
@@ -18,19 +23,18 @@
 | 機能 | 説明 |
 | --- | --- |
 | **オートコリメータ読み取り** | シリアル通信でオートコリメータから X/Y 傾き角度を連続取得し、リアルタイム表示する |
-| **PAMC-204 手動制御** | PAMC-204 DLL 経由でピエゾモーターを手動で相対/絶対移動・停止・ホーム設定できる |
-| **自動ドリフト補正（ADC）** | オートコリメータの誤差をゼロに近づけるよう、PAMC-204 を自動制御する（勾配降下法） |
+| **ピエゾモーター手動制御** | DLL または send_command 経由でピエゾモーターを手動で相対移動・停止できる |
+| **自動ドリフト補正（ADC）** | オートコリメータの誤差をゼロに近づけるよう、ピエゾモーターを自動制御する（勾配降下法） |
 | **ポジションルーティン** | 事前定義された複数の目標位置を順番に移動し、各位置で ADC 収束を待つ自動シーケンス |
 | **データロギング** | 測定データ（時刻・X/Y 角度）を CSV 形式でファイル保存する |
 
 ### ADC（自動ドリフト補正）の動作原理
 
 ```text
-オートコリメータ → 角度誤差を計算 → PAMC-204 ch1/ch2 を順次駆動 → 誤差を縮小
+オートコリメータ → 角度誤差を計算 → ピエゾモーター ch1/ch2 を順次駆動 → 誤差を縮小
 ```
 
-- PAMC-204 は **同時2軸駆動非対応** のため、X軸 → Y軸 の順に **順次駆動**
-- **モーター速度: 1500 Hz 固定**（接続時に全チャンネルへ自動設定）
+- コントローラーは **同時2軸駆動非対応** のため、X軸 → Y軸 の順に **順次駆動**
 - キャリブレーション: 1000パルス ≈ 2.74 単位角度（≈ 365 pulses/unit）
 
 ---
@@ -39,20 +43,21 @@
 
 ```text
 demo/
-├── __init__.py          # パッケージ初期化
-├── main.py              # エントリーポイント ← ここから起動
-├── gui.py               # メイン GUI クラス（ADCGUI）
-├── pamc204_wrapper.py   # PAMC-204 DLL ラッパー（PAMC204 クラス）
-├── ac_thread.py         # オートコリメータ読み取りスレッド（AcThread）
-├── adc_thread.py        # ADC 制御スレッド（ADCControlThread）
-└── position_routine.py  # ポジションルーティンスレッド（PositionRoutineThread）
+├── __init__.py              # パッケージ初期化
+├── main.py                  # エントリーポイント ← ここから起動
+├── gui.py                   # メイン GUI クラス（ADCGUI）・モード定義（PiezoMode）
+├── pamc204_wrapper.py       # PAMC-204 DLL ラッパー（PAMC204 クラス）
+├── pamc104_204_wrapper.py   # PAMC-104/204 send_command ラッパー（PAMC104_204 クラス）
+├── ac_thread.py             # オートコリメータ読み取りスレッド（AcThread）
+├── adc_thread.py            # ADC 制御スレッド（ADCControlThread）
+└── position_routine.py      # ポジションルーティンスレッド（PositionRoutineThread）
 ```
 
 ---
 
 ## 必要環境
 
-- **OS**: Windows（PAMC-204 DLL は Windows 専用）
+- **OS**: Windows（pamc204.dll は Windows 専用）
 - **Python**: 3.10 以上
 - **依存ライブラリ**:
 
@@ -60,7 +65,7 @@ demo/
 pip install pyserial numpy
 ```
 
-- **PAMC-204 DLL**: 配布済みの `pamc204.dll` を `demo/` フォルダに配置すること
+- **pamc204.dll**: 配布済みの `pamc204.dll` を `demo/` フォルダに配置すること
 
 ---
 
@@ -72,9 +77,19 @@ pip install pyserial numpy
 # 2. demo/ フォルダに移動
 cd demo
 
-# 3. 起動
+# 3. 起動（PAMC-204 DLL モード、デフォルト）
 python main.py --dll ./pamc204.dll
+
+# PAMC-104/204両対応モードで起動する場合
+python main.py --mode pamc104_204 --dll ./pamc204.dll
 ```
+
+### モード一覧
+
+| `--mode` | 対応コントローラー | 使用ラッパー | 備考 |
+| --- | --- | --- | --- |
+| `pamc204`（デフォルト） | PAMC-204 | `pamc204_wrapper.py` | DLL の高レベル API を使用 |
+| `pamc104_204` | PAMC-104 / PAMC-204 | `pamc104_204_wrapper.py` | `pamc204_send_command()` で ExxNR/RR コマンドを直接送信 |
 
 ---
 
@@ -111,17 +126,17 @@ python main.py --dll ./pamc204.dll
 
 ---
 
-### 中央パネル: PAMC-204 Piezo Motor Control
+### 中央パネル: Piezo Motor Control
 
-PAMC-204 への接続と手動操作を行います。
+ピエゾモーターコントローラーへの接続と手動操作を行います。
 
 #### 接続
 
-1. **「Address」** に PAMC-204 のアドレスを入力（デフォルト: `1`）
-2. **「Connect PAMC-204」** をクリック
+1. **「Address」** にデバイスアドレスを入力（デフォルト: `1`）
+2. **「Connect PAMC-204」**（または **「Connect PAMC-104/204」**）をクリック
    - 成功: `Status: Connected (addr=1)` が緑色で表示
    - 失敗: `Status: Connection failed` が赤色で表示
-   - **接続成功時、全チャンネルのモーター速度が 1500 Hz に自動設定される**
+   - **`pamc204` モードでは接続成功時に全チャンネルの速度が 1500 Hz に自動設定される**
 3. 切断するときは **「Disconnect」** をクリック
 
 #### 軸選択
@@ -132,18 +147,18 @@ PAMC-204 への接続と手動操作を行います。
 
 | ボタン | 動作 |
 | --- | --- |
-| **Set Home** | 選択軸の現在位置をホームポジション（0）に設定 |
+| **Set Home** | 選択軸の現在位置をホームポジション（0）に設定（`pamc204` モードのみ） |
 | **Move (Rel)** | 「Rel pulses」欄のパルス数だけ相対移動（正: 正方向、負: 負方向） |
-| **Move (Abs)** | 「Abs position」欄の絶対位置へ移動 |
-| **Stop** | 選択軸の動作を停止 |
-| **Position?** | 選択軸の現在位置を問い合わせて「Position: xx」に表示 |
+| **Move (Abs)** | 「Abs position」欄の絶対位置へ移動（`pamc204` モードのみ） |
+| **Stop** | 動作を停止 |
+| **Position?** | 現在位置を問い合わせて表示（`pamc204` モードのみ） |
 
 #### 入力欄
 
 | 欄 | 説明 |
 | --- | --- |
 | **Rel pulses** | 相対移動のパルス数（デフォルト: 100） |
-| **Abs position** | 絶対移動の目標位置（デフォルト: 0） |
+| **Abs position** | 絶対移動の目標位置（デフォルト: 0、`pamc204` モードのみ） |
 
 #### Configuration（軸設定）
 
@@ -161,7 +176,7 @@ PAMC-204 への接続と手動操作を行います。
 
 #### 操作
 
-1. オートコリメータ読み取りと PAMC-204 接続が完了していることを確認
+1. オートコリメータ読み取りとコントローラー接続が完了していることを確認
 2. **ADC Parameters** を必要に応じて調整
 3. **「Start ADC」**（緑ボタン）をクリック → 自動補正開始
    - `ADC Status` が **ADC: Active** に変わる
@@ -206,7 +221,7 @@ PAMC-204 への接続と手動操作を行います。
 
 各位置で ADC が収束するまで待機（最大30秒）してからホールドします。
 
-**前提条件**: オートコリメータ読み取り中・PAMC-204 接続済みであること
+**前提条件**: オートコリメータ読み取り中・コントローラー接続済みであること
 
 ---
 

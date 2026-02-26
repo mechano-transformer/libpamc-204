@@ -1,11 +1,12 @@
 """
 エントリーポイント
-Autocollimator & PAMC-204 Alignment Demo を起動する。
+Autocollimator & Piezo Motor Alignment Demo を起動する。
 
-使い方:
-    python -m demo                          # 自動検索（build/Release/pamc204.dll など）
-    python -m demo --dll C:/path/to/pamc204.dll  # DLL パスを明示指定
-    python demo/main.py --dll C:/path/to/pamc204.dll
+使い方（demo/ フォルダ内から実行）:
+    python main.py                                    # PAMC-204 DLL モード（デフォルト）
+    python main.py --dll ./pamc204.dll                # DLL パスを明示指定
+    python main.py --mode pamc104_204                 # PAMC-104/204 send_command モード
+    python main.py --mode pamc104_204 --dll ./pamc204.dll
 """
 import sys
 import os
@@ -15,12 +16,12 @@ import argparse
 if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from demo.gui import ADCGUI
+from demo.gui import ADCGUI, PiezoMode
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Autocollimator & PAMC-204 Alignment Demo"
+        description="Autocollimator & Piezo Motor Alignment Demo"
     )
     parser.add_argument(
         "--dll",
@@ -28,11 +29,28 @@ def main():
         default=None,
         help="pamc204.dll のパスを明示指定する（省略時は自動検索）",
     )
+    parser.add_argument(
+        "--mode",
+        metavar="MODE",
+        default=PiezoMode.PAMC204.value,
+        choices=[m.value for m in PiezoMode],
+        help=(
+            "ピエゾモーター制御モード。"
+            f"選択肢: {', '.join(m.value for m in PiezoMode)} "
+            f"（デフォルト: {PiezoMode.PAMC204.value}）"
+        ),
+    )
     args = parser.parse_args()
 
-    app = ADCGUI(dll_path=args.dll)
+    try:
+        mode = PiezoMode.from_str(args.mode)
+    except ValueError as e:
+        parser.error(str(e))
+
+    app = ADCGUI(dll_path=args.dll, mode=mode)
     app.mainloop()
 
 
 if __name__ == "__main__":
     main()
+
