@@ -1,8 +1,8 @@
-﻿#include "pamc204.h"
+#include "pamc204.h"
 #include "utils.h"
 #include <cstdio>
-#include <devguid.h>
 #include <initguid.h>
+#include <devguid.h>
 #include <setupapi.h>
 #include <string>
 #include <vector>
