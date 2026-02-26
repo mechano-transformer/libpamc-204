@@ -3,7 +3,7 @@ PAMC-204 DLL (pamc204.dll) の Python ラッパー
 Windows 前提: test_windows_all_apis.py と同じシグネチャ定義を使用
 """
 import ctypes
-from ctypes import wintypes, c_char_p, c_char
+from ctypes import wintypes, c_char_p, c_char, POINTER
 import os
 import time
 
@@ -89,6 +89,12 @@ def _setup_signatures(lib):
 
     lib.pamc204_stop_motion_all_channels.restype  = wintypes.BOOL
     lib.pamc204_stop_motion_all_channels.argtypes = [wintypes.INT]
+
+    lib.pamc204_query_actual_position_all_channels.restype  = wintypes.BOOL
+    lib.pamc204_query_actual_position_all_channels.argtypes = [wintypes.INT, wintypes.INT * 4]
+
+    lib.pamc204_query_motion_status_all_channels.restype  = wintypes.BOOL
+    lib.pamc204_query_motion_status_all_channels.argtypes = [wintypes.INT, wintypes.INT * 4]
 
 
 # モジュールロード時に DLL を読み込む（パス未指定 = 自動検索）
@@ -200,15 +206,60 @@ class PAMC204:
             return False
         return bool(self.lib.pamc204_abort_motion(self.address))
 
-    def wait_for_stop(self, channel, poll_interval=0.05):
-        """動作完了待ち（ExxmMD? を送信して短時間待機）。
+    def query_actual_position_all_channels(self):
+        """全チャンネルの実位置を取得する（ExxmTP? × 4ch）。
 
-        現 DLL は戻り値が BOOL のみで停止状態を直接取得できないため、
-        MD? コマンドを送信しながら一定時間待機する。
-        実用上は ADC の sample_period が十分長ければ動作完了後に次のコマンドが送られる。
+        Returns:
+            list[int] | None: 各チャンネルの位置 [ch1, ch2, ch3, ch4]。失敗時は None。
+        """
+        if not self.is_connected:
+            return None
+        positions = (wintypes.INT * 4)()
+        ok = bool(self.lib.pamc204_query_actual_position_all_channels(self.address, positions))
+        if ok:
+            return list(positions)
+        return None
+
+    def query_motion_status_all_channels(self):
+        """全チャンネルの動作状態を取得する（ExxmMD? × 4ch）。
+
+        Returns:
+            list[int] | None: 各チャンネルの状態 [ch1, ch2, ch3, ch4]。
+                              値: 1=停止(Stopped), 0=動作中(Moving), -1=エラー。
+                              失敗時は None。
+        """
+        if not self.is_connected:
+            return None
+        statuses = (wintypes.INT * 4)()
+        ok = bool(self.lib.pamc204_query_motion_status_all_channels(self.address, statuses))
+        if ok:
+            return list(statuses)
+        return None
+
+    def wait_for_stop(self, channel, poll_interval=0.05, timeout=5.0):
+        """動作完了待ち（ExxmMD? × 4ch でポーリング）。
+
+        pamc204_query_motion_status_all_channels を使って指定チャンネルの
+        停止状態（status == 1）を確認するまでポーリングする。
+
+        Args:
+            channel:       待機対象チャンネル番号（1-4）
+            poll_interval: ポーリング間隔（秒）
+            timeout:       タイムアウト（秒）。超過時は警告を出して返る。
         """
         if not self.is_connected:
             return True
-        self.lib.pamc204_query_motion_status(self.address, channel)
-        time.sleep(poll_interval)
-        return True
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            statuses = self.query_motion_status_all_channels()
+            if statuses is None:
+                # 取得失敗時は固定待機してリトライ
+                time.sleep(poll_interval)
+                continue
+            # statuses は 0-indexed: channel 1 → index 0
+            idx = channel - 1
+            if 0 <= idx < len(statuses) and statuses[idx] == 1:
+                return True  # 停止確認
+            time.sleep(poll_interval)
+        print(f"[PAMC204] wait_for_stop: timeout waiting for ch{channel} to stop")
+        return False
