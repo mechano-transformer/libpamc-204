@@ -83,16 +83,19 @@ class PositionRoutineThread(threading.Thread):
     def _start_adc(self, convergence_threshold: float) -> bool:
         """ADC を起動する。失敗時は False を返す。"""
         try:
-            sample_period      = float(self.master.ADC_period_var.get())
-            learning_rate      = float(self.master.ADC_lr_var.get())
-            min_step           = int(self.master.ADC_min_step_var.get())
-            max_step           = int(self.master.ADC_max_step_var.get())
-            pulses_per_unit    = float(self.master.ADC_pulses_per_unit_var.get())
+            sample_period         = float(self.master.ADC_period_var.get())
+            learning_rate         = float(self.master.ADC_lr_var.get())
+            min_step              = int(self.master.ADC_min_step_var.get())
+            max_step              = int(self.master.ADC_max_step_var.get())
+            pulses_per_unit       = float(self.master.ADC_pulses_per_unit_var.get())
             convergence_threshold = float(self.master.ADC_convergence_threshold_var.get())
+            settle_time           = float(self.master.ADC_settle_time_var.get())
             if pulses_per_unit <= 0:
                 raise ValueError("Piezo calibration factor must be positive")
             if convergence_threshold < 0:
                 raise ValueError("Convergence threshold must be non-negative")
+            if settle_time < 0:
+                raise ValueError("Settle time must be non-negative")
         except ValueError as e:
             print(f"Error: Invalid ADC parameters: {e}")
             return False
@@ -105,6 +108,7 @@ class PositionRoutineThread(threading.Thread):
             worker.max_step_pulses       = max_step
             worker.pulses_per_unit       = pulses_per_unit
             worker.convergence_threshold = convergence_threshold
+            worker.settle_time           = settle_time
             self.master.ADC_worker = worker
             self.master.ADC_active = True
             worker.start()
@@ -115,21 +119,47 @@ class PositionRoutineThread(threading.Thread):
             print("ADC control started for position routine")
         return True
 
-    def _wait_for_convergence(self, target_x: float, target_y: float, threshold: float) -> bool:
-        """ADC が収束するまで最大 30 秒待つ。"""
+    def _wait_for_convergence(self, target_x: float, target_y: float, threshold: float,
+                               stable_count: int = 5, check_interval: float = 0.1) -> bool:
+        """ADC が収束するまで最大 30 秒待つ。
+
+        オーバーシュート防止のため、連続 stable_count 回閾値内に収まった場合のみ収束とみなす。
+        1回だけ閾値内に入っても、モーターの振動/慣性で次の瞬間に閾値外に出る可能性があるため。
+
+        Args:
+            target_x:       X 軸目標値
+            target_y:       Y 軸目標値
+            threshold:      収束判定閾値
+            stable_count:   連続して閾値内に収まる必要がある回数（デフォルト: 5回）
+            check_interval: チェック間隔（秒）
+        """
         print(f"Position Routine: Waiting for convergence to ({target_x}, {target_y})")
         max_wait = 30.0
         start = time.time()
+        consecutive_ok = 0  # 連続して閾値内に収まった回数
 
         while (time.time() - start) < max_wait:
             if not self.running:
                 return False
             cx = self.master.alnx_smooth if self.master.smoothing_enabled else self.master.alnx
             cy = self.master.alny_smooth if self.master.smoothing_enabled else self.master.alny
-            if abs(cx - target_x) <= threshold and abs(cy - target_y) <= threshold:
-                print(f"Position Routine: Converged to ({target_x}, {target_y})")
-                return True
-            time.sleep(0.1)
+            ex = abs(cx - target_x)
+            ey = abs(cy - target_y)
+
+            if ex <= threshold and ey <= threshold:
+                consecutive_ok += 1
+                if consecutive_ok >= stable_count:
+                    print(f"Position Routine: Converged to ({target_x}, {target_y}) "
+                          f"(stable {stable_count} times, X err={ex:.4f}, Y err={ey:.4f})")
+                    return True
+            else:
+                # 閾値外に出たらカウントをリセット
+                if consecutive_ok > 0:
+                    print(f"Position Routine: Convergence reset (X err={ex:.4f}, Y err={ey:.4f}, "
+                          f"was stable {consecutive_ok}/{stable_count})")
+                consecutive_ok = 0
+
+            time.sleep(check_interval)
         return False
 
     def _log_convergence_failure(self, target_x: float, target_y: float) -> None:

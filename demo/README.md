@@ -6,7 +6,7 @@
 対応コントローラー:
 
 - **PAMC-204**（DLL 経由、デフォルト）
-- **PAMC-104 / PAMC-204**（`pamc204_send_command` 経由、`--mode pamc104_204`）
+- **PAMC-104**（RS232C 直接通信、`--mode pamc104`）
 
 ---
 
@@ -23,7 +23,7 @@
 | 機能 | 説明 |
 | --- | --- |
 | **オートコリメータ読み取り** | シリアル通信でオートコリメータから X/Y 傾き角度を連続取得し、リアルタイム表示する |
-| **ピエゾモーター手動制御** | DLL または send_command 経由でピエゾモーターを手動で相対移動・停止できる |
+| **ピエゾモーター手動制御** | DLL または RS232C 経由でピエゾモーターを手動で相対移動・停止できる |
 | **自動ドリフト補正（ADC）** | オートコリメータの誤差をゼロに近づけるよう、ピエゾモーターを自動制御する（勾配降下法） |
 | **ポジションルーティン** | 事前定義された複数の目標位置を順番に移動し、各位置で ADC 収束を待つ自動シーケンス |
 | **データロギング** | 測定データ（時刻・X/Y 角度）を CSV 形式でファイル保存する |
@@ -35,6 +35,7 @@
 ```
 
 - コントローラーは **同時2軸駆動非対応** のため、X軸 → Y軸 の順に **順次駆動**
+- X軸移動後に `Settle Time` 待機してからY軸の誤差を再計算（オーバーシュート防止）
 - キャリブレーション: 1000パルス ≈ 2.74 単位角度（≈ 365 pulses/unit）
 
 ---
@@ -47,7 +48,7 @@ demo/
 ├── main.py                  # エントリーポイント ← ここから起動
 ├── gui.py                   # メイン GUI クラス（ADCGUI）・モード定義（PiezoMode）
 ├── pamc204_wrapper.py       # PAMC-204 DLL ラッパー（PAMC204 クラス）
-├── pamc104_204_wrapper.py   # PAMC-104/204 send_command ラッパー（PAMC104_204 クラス）
+├── pamc104_wrapper.py       # PAMC-104 RS232C 直接通信ラッパー（PAMC104 クラス）
 ├── ac_thread.py             # オートコリメータ読み取りスレッド（AcThread）
 ├── adc_thread.py            # ADC 制御スレッド（ADCControlThread）
 └── position_routine.py      # ポジションルーティンスレッド（PositionRoutineThread）
@@ -65,31 +66,53 @@ demo/
 pip install pyserial numpy
 ```
 
-- **pamc204.dll**: 配布済みの `pamc204.dll` を `demo/` フォルダに配置すること
+- **pamc204.dll**: PAMC-204 モード使用時は `demo/` フォルダに配置すること
 
 ---
 
 ## 実行方法
 
 ```bash
-# 1. pamc204.dll を demo/ フォルダに配置する
-
-# 2. demo/ フォルダに移動
+# 1. demo/ フォルダに移動
 cd demo
 
-# 3. 起動（PAMC-204 DLL モード、デフォルト）
-python main.py --dll ./pamc204.dll
+# 2. 起動（PAMC-204 DLL モード、デフォルト）
+python main.py
 
-# PAMC-104/204両対応モードで起動する場合
-python main.py --mode pamc104_204 --dll ./pamc204.dll
+# DLL パスを明示指定する場合
+python main.py --dll ./pamc204.dll  --mode pamc204
+
+# PAMC-104 RS232C 直接通信モードで起動する場合
+python main.py --mode pamc104
 ```
 
 ### モード一覧
 
-| `--mode` | 対応コントローラー | 使用ラッパー | 備考 |
+| `--mode` | 対応コントローラー | 使用ラッパー | 接続方式 |
 | --- | --- | --- | --- |
 | `pamc204`（デフォルト） | PAMC-204 | `pamc204_wrapper.py` | DLL の高レベル API を使用 |
-| `pamc104_204` | PAMC-104 / PAMC-204 | `pamc104_204_wrapper.py` | `pamc204_send_command()` で ExxNR/RR コマンドを直接送信 |
+| `pamc104` | PAMC-104 | `pamc104_wrapper.py` | RS232C 直接通信（115200bps）。GUI でシリアルポートを選択して接続 |
+
+---
+
+## PAMC-104 コマンド仕様
+
+PAMC-104 は RS232C 経由でコマンドを直接送信します（アドレス指定なし）。
+
+| コマンド | 説明 | 例 | 返答 |
+| --- | --- | --- | --- |
+| `CON` | 通信確認 | `CON` | `OK` |
+| `INF` | バージョン確認 | `INF` | `PAMC-104 Ver:0.8.0` |
+| `NRffffnnnnA` | 正方向駆動（4桁パルス） | `NR15000010A` | `OK`→`FIN` |
+| `RRffffnnnnA` | 逆方向駆動（4桁パルス） | `RR15000010A` | `OK`→`FIN` |
+| `NRffffXnnnnnnA` | 正方向駆動（6桁拡張、fw0.8.0以降） | `NR1500X000100A` | `OK`→`FIN` |
+| `S` | 駆動停止 | `S` | `FIN nnnnn` |
+
+- `ffff`: 駆動周波数（1〜1500 Hz、4桁）
+- `nnnn`: 駆動パルス数（0000〜9999、0000=連続駆動）
+- `A`〜`D`: 軸指定（A=ch1, B=ch2, C=ch3, D=ch4）
+
+通信パラメータ: 115200bps / 8bit / パリティなし / ストップビット1 / フロー制御なし / デリミタ CR+LF
 
 ---
 
@@ -130,14 +153,22 @@ python main.py --mode pamc104_204 --dll ./pamc204.dll
 
 ピエゾモーターコントローラーへの接続と手動操作を行います。
 
-#### 接続
+#### 接続（PAMC-204 モード）
 
 1. **「Address」** にデバイスアドレスを入力（デフォルト: `1`）
-2. **「Connect PAMC-204」**（または **「Connect PAMC-104/204」**）をクリック
+2. **「Connect PAMC-204」** をクリック
    - 成功: `Status: Connected (addr=1)` が緑色で表示
    - 失敗: `Status: Connection failed` が赤色で表示
-   - **`pamc204` モードでは接続成功時に全チャンネルの速度が 1500 Hz に自動設定される**
+   - **接続成功時に全チャンネルの速度が 1500 Hz に自動設定される**
 3. 切断するときは **「Disconnect」** をクリック
+
+#### 接続（PAMC-104 モード）
+
+1. **「Refresh」** をクリックしてシリアルポート一覧を更新
+2. ドロップダウンから COM ポートを選択
+3. **「Connect PAMC-104」** をクリック
+   - `CON` コマンドで通信確認し、成功すれば `Status: Connected (COMx)` が緑色で表示
+4. 切断するときは **「Disconnect」** をクリック
 
 #### 軸選択
 
@@ -203,7 +234,8 @@ python main.py --mode pamc104_204 --dll ./pamc204.dll
 | **Min Step (pulses)** | 1 | 最小補正パルス数（これ以下の補正は行わない） |
 | **Max Step (pulses)** | 500 | 最大補正パルス数（1ステップの上限） |
 | **Piezo Calibration (pulses/angle)** | 365 | 1単位角度あたりのパルス数（≈ 1000 / 2.74） |
-| **Convergence Threshold** | 0.01 | 収束判定の誤差閾値（この値以下で収束とみなす） |
+| **Convergence Threshold** | 0.01 | 収束判定の誤差閾値（この値以下で補正しない） |
+| **Settle Time (s)** | 0.2 | X軸移動後にオートコリメータの値が安定するまで待つ時間（秒）。モーターの振動が収まるまでの待機時間。大きくするほど安定するが応答が遅くなる |
 
 ---
 
@@ -219,7 +251,7 @@ python main.py --mode pamc104_204 --dll ./pamc204.dll
 | 4 | (+7.0, +7.0) | 2秒 |
 | 5 | (0.0, 0.0) | 原点復帰 |
 
-各位置で ADC が収束するまで待機（最大30秒）してからホールドします。
+各位置で ADC が**連続5回**収束閾値内に収まるまで待機（最大30秒）してからホールドします。
 
 **前提条件**: オートコリメータ読み取り中・コントローラー接続済みであること
 

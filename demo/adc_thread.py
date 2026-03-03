@@ -32,6 +32,9 @@ class ADCControlThread(threading.Thread):
         self.min_step_pulses: int = 1
         self.max_step_pulses: int = 500
         self.convergence_threshold: float = 0.01
+        # X軸移動後にオートコリメータの値が安定するまで待つ時間（秒）
+        # モーターの振動が収まり、オートコリメータの読み取り値が安定するまでの時間
+        self.settle_time: float = 0.2
 
         self.prev_error_x: float = 0.0
         self.prev_error_y: float = 0.0
@@ -60,28 +63,45 @@ class ADCControlThread(threading.Thread):
 
         print("ADC control thread stopped")
 
+    def _calc_pulses(self, error: float, learning_rate: float) -> int:
+        """誤差からパルス数を計算する（適応ステップサイズ付き）。"""
+        adaptive_lr = learning_rate * min(1.0, max(0.1, abs(error) / 0.1))
+        return -int(round(adaptive_lr * error * self.pulses_per_unit))
+
+    def _apply_reverse(self, pulses: int, axis: int) -> int:
+        """指定軸の反転設定を適用してパルス数を返す。"""
+        if axis == 1 and self.master.reverse_axis1:
+            return -pulses
+        if axis == 2 and self.master.reverse_axis2:
+            return -pulses
+        return pulses
+
+    def _clamp_pulses(self, error: float, pulses: int) -> int:
+        """クランプ・最小ステップ適用（収束閾値以下なら 0 を返す）。"""
+        if abs(error) <= self.convergence_threshold:
+            return 0
+        pulses = int(np.clip(pulses, -self.max_step_pulses, self.max_step_pulses))
+        if abs(pulses) < self.min_step_pulses:
+            pulses = self.min_step_pulses if pulses >= 0 else -self.min_step_pulses
+        return pulses
+
+    def _read_errors(self):
+        """現在の角度誤差を返す。スムージング設定を反映する。"""
+        current_x = self.master.alnx_smooth if self.master.smoothing_enabled else self.master.alnx
+        current_y = self.master.alny_smooth if self.master.smoothing_enabled else self.master.alny
+        return current_x - self.master.ADC_target_x, current_y - self.master.ADC_target_y
+
     def _control_step(self, iteration: int) -> None:
-        """1ステップの ADC 制御を実行する（勾配降下法）。"""
+        """1ステップの ADC 制御を実行する（勾配降下法）。
+
+        修正点:
+          - X軸移動後にオートコリメータの安定を待ってからY軸の誤差を再計算する
+          - 収束閾値内に入ったら補正しない（オーバーシュート防止）
+        """
         pamc = self.master.pamc
         if not pamc.is_connected:
             print("ADC: PAMC-204 not connected")
             return
-
-        # 現在の角度誤差を計算
-        current_x = self.master.alnx_smooth if self.master.smoothing_enabled else self.master.alnx
-        current_y = self.master.alny_smooth if self.master.smoothing_enabled else self.master.alny
-        error_x = current_x - self.master.ADC_target_x
-        error_y = current_y - self.master.ADC_target_y
-
-        self.master.ADC_error_x = error_x
-        self.master.ADC_error_y = error_y
-
-        # 適応ステップサイズ（誤差が大きいほど大きなステップ）
-        adaptive_lr_x = self.learning_rate_x * min(1.0, max(0.1, abs(error_x) / 0.1))
-        adaptive_lr_y = self.learning_rate_y * min(1.0, max(0.1, abs(error_y) / 0.1))
-
-        pulses_x = -int(round(adaptive_lr_x * error_x * self.pulses_per_unit))
-        pulses_y = -int(round(adaptive_lr_y * error_y * self.pulses_per_unit))
 
         # 軸割り当て（デフォルト: X→ch2, Y→ch1 / スワップ時: X→ch1, Y→ch2）
         if self.master.swap_axes:
@@ -89,47 +109,54 @@ class ADCControlThread(threading.Thread):
         else:
             axis_x, axis_y = 2, 1
 
-        # 軸反転
-        if axis_x == 1 and self.master.reverse_axis1:
-            pulses_x = -pulses_x
-        elif axis_x == 2 and self.master.reverse_axis2:
-            pulses_x = -pulses_x
+        # ── X 軸補正 ──────────────────────────────────────────────────────────
+        error_x, error_y = self._read_errors()
+        self.master.ADC_error_x = error_x
+        self.master.ADC_error_y = error_y
 
-        if axis_y == 1 and self.master.reverse_axis1:
-            pulses_y = -pulses_y
-        elif axis_y == 2 and self.master.reverse_axis2:
-            pulses_y = -pulses_y
+        pulses_x = self._calc_pulses(error_x, self.learning_rate_x)
+        pulses_x = self._apply_reverse(pulses_x, axis_x)
+        pulses_x = self._clamp_pulses(error_x, pulses_x)
 
-        # クランプ
-        pulses_x = int(np.clip(pulses_x, -self.max_step_pulses, self.max_step_pulses))
-        pulses_y = int(np.clip(pulses_y, -self.max_step_pulses, self.max_step_pulses))
-
-        # 最小ステップ適用（収束閾値以下なら補正なし）
-        if abs(error_x) > self.convergence_threshold:
-            if abs(pulses_x) < self.min_step_pulses:
-                pulses_x = self.min_step_pulses if pulses_x >= 0 else -self.min_step_pulses
-        else:
-            pulses_x = 0
-
-        if abs(error_y) > self.convergence_threshold:
-            if abs(pulses_y) < self.min_step_pulses:
-                pulses_y = self.min_step_pulses if pulses_y >= 0 else -self.min_step_pulses
-        else:
-            pulses_y = 0
-
-        # PAMC-204 は同時2軸駆動非対応のため、X軸 → Y軸 の順に順次駆動
         if pulses_x != 0:
             print(f"ADC Step {iteration}: X error={error_x:.4f}, sending {pulses_x:+d} pulses to ch{axis_x}")
-            self._move_axis(axis_x, pulses_x)
-            self.master.ADC_total_pulses_x += pulses_x
+            finished = self._move_axis(axis_x, pulses_x)
+            if finished:
+                self.master.ADC_total_pulses_x += pulses_x
+                # X軸移動後、オートコリメータの値が安定するまで待つ
+                time.sleep(self.settle_time)
+            else:
+                # タイムアウト or 失敗 → このステップを中断
+                print(f"ADC Step {iteration}: X move failed/timeout, skipping Y correction")
+                return
+        else:
+            print(f"ADC Step {iteration}: X error={error_x:.4f}, no X correction needed")
+
+        # ── Y 軸補正（X軸移動後に誤差を再計算）────────────────────────────────
+        _, error_y = self._read_errors()
+        self.master.ADC_error_y = error_y
+
+        pulses_y = self._calc_pulses(error_y, self.learning_rate_y)
+        pulses_y = self._apply_reverse(pulses_y, axis_y)
+        pulses_y = self._clamp_pulses(error_y, pulses_y)
 
         if pulses_y != 0:
             print(f"ADC Step {iteration}: Y error={error_y:.4f}, sending {pulses_y:+d} pulses to ch{axis_y}")
-            self._move_axis(axis_y, pulses_y)
-            self.master.ADC_total_pulses_y += pulses_y
+            finished = self._move_axis(axis_y, pulses_y)
+            if finished:
+                self.master.ADC_total_pulses_y += pulses_y
+                # Y軸移動後も安定待ち
+                time.sleep(self.settle_time)
+            else:
+                print(f"ADC Step {iteration}: Y move failed/timeout")
+                return
+        else:
+            print(f"ADC Step {iteration}: Y error={error_y:.4f}, no Y correction needed")
 
-        if pulses_x == 0 and pulses_y == 0:
-            print(f"ADC Step {iteration}: X error={error_x:.4f}, Y error={error_y:.4f}, no correction needed")
+        # 最終誤差を再読み取りして表示更新
+        error_x, error_y = self._read_errors()
+        self.master.ADC_error_x = error_x
+        self.master.ADC_error_y = error_y
 
         self.prev_error_x = error_x
         self.prev_error_y = error_y
@@ -138,24 +165,28 @@ class ADCControlThread(threading.Thread):
 
         self.master.update_ADC_display()
 
-    def _move_axis(self, channel: int, pulses: int) -> None:
-        """PAMC-204 の指定チャンネルを相対移動させ、完了を待つ。
+    def _move_axis(self, channel: int, pulses: int) -> bool:
+        """PAMC の指定チャンネルを相対移動させ、完了を待つ。
 
-        コマンド: ExxmPRnnnn（例: E011PR100）
+        Returns:
+            bool: 移動完了（FIN 受信）なら True、失敗・タイムアウトなら False
         """
         pamc = self.master.pamc
         if not pamc.is_connected:
-            print(f"[ADC] PAMC-204 not connected, skip move ch{channel} {pulses:+d} pulses")
-            return
+            print(f"[ADC] PAMC not connected, skip move ch{channel} {pulses:+d} pulses")
+            return False
 
-        print(f"[ADC] move_relative: address={pamc.address}, channel={channel}, pulses={pulses:+d}")
+        print(f"[ADC] move_relative: channel={channel}, pulses={pulses:+d}")
         ok = pamc.move_relative(channel, pulses)
         if not ok:
             print(f"[ADC] move_relative failed: ch{channel} {pulses:+d} pulses")
-            return
+            return False
 
-        # 動作完了待ち（ExxmMD? を送信して短時間待機）
-        pamc.wait_for_stop(channel)
+        # 動作完了待ち
+        finished = pamc.wait_for_stop(channel)
+        if not finished:
+            print(f"[ADC] wait_for_stop timeout: ch{channel} — skipping further corrections")
+        return finished
 
     def stop(self) -> None:
         self.running = False

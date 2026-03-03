@@ -18,7 +18,7 @@ import serial
 import serial.tools.list_ports
 
 from .pamc204_wrapper import PAMC204
-from .pamc104_204_wrapper import PAMC104_204
+from .pamc104_wrapper import PAMC104
 from .ac_thread import AcThread
 from .adc_thread import ADCControlThread
 from .position_routine import PositionRoutineThread
@@ -29,8 +29,8 @@ class PiezoMode(str, Enum):
 
     str を継承しているため argparse / 文字列比較と透過的に使用できる。
     """
-    PAMC204     = "pamc204"      # PAMC-204 DLL 経由（デフォルト）
-    PAMC104_204 = "pamc104_204"  # PAMC-104/204 send_command 経由
+    PAMC204 = "pamc204"  # PAMC-204 DLL 経由（デフォルト）
+    PAMC104 = "pamc104"  # PAMC-104 RS232C 直接通信
 
     @classmethod
     def from_str(cls, value: str) -> "PiezoMode":
@@ -44,7 +44,7 @@ class PiezoMode(str, Enum):
     @property
     def label(self) -> str:
         """GUI 表示用ラベル文字列。"""
-        return "PAMC-104/204" if self is PiezoMode.PAMC104_204 else "PAMC-204"
+        return "PAMC-104" if self is PiezoMode.PAMC104 else "PAMC-204"
 
 
 class ADCGUI(tk.Tk):
@@ -83,8 +83,8 @@ class ADCGUI(tk.Tk):
         self.current_unit = "mdeg"
 
         # ── ピエゾモーターコントローラー（モードで切り替え）────────
-        if self._mode is PiezoMode.PAMC104_204:
-            self.pamc = PAMC104_204(address=1, dll_path=self._dll_path)
+        if self._mode is PiezoMode.PAMC104:
+            self.pamc = PAMC104()
         else:
             self.pamc = PAMC204(address=1, dll_path=self._dll_path)
 
@@ -222,11 +222,22 @@ class ADCGUI(tk.Tk):
         connect_frame = tk.LabelFrame(self.piezo_frame, text=f"{lbl} Connection", padx=10, pady=10)
         connect_frame.pack(pady=10, fill=tk.X)
 
-        addr_row = tk.Frame(connect_frame)
-        addr_row.pack(fill=tk.X, pady=2)
-        tk.Label(addr_row, text="Address:").pack(side=tk.LEFT, padx=5)
-        self.pamc_address_var = tk.StringVar(value="1")
-        tk.Entry(addr_row, textvariable=self.pamc_address_var, width=5).pack(side=tk.LEFT, padx=5)
+        if self._mode is PiezoMode.PAMC104:
+            # PAMC-104: シリアルポート選択（RS232C 直接通信）
+            tk.Label(connect_frame, text="Serial Port:").pack(anchor="w", padx=5)
+            port_row = tk.Frame(connect_frame)
+            port_row.pack(fill=tk.X, pady=2)
+            self.pamc104_port_select = ttk.Combobox(port_row, width=22)
+            self.pamc104_port_select.pack(side=tk.LEFT, padx=5)
+            tk.Button(port_row, text="Refresh", command=self._refresh_pamc104_ports, width=8).pack(side=tk.LEFT, padx=2)
+            self._refresh_pamc104_ports()
+        else:
+            # PAMC-204: アドレス入力（DLL 経由）
+            addr_row = tk.Frame(connect_frame)
+            addr_row.pack(fill=tk.X, pady=2)
+            tk.Label(addr_row, text="Address:").pack(side=tk.LEFT, padx=5)
+            self.pamc_address_var = tk.StringVar(value="1")
+            tk.Entry(addr_row, textvariable=self.pamc_address_var, width=5).pack(side=tk.LEFT, padx=5)
 
         btn_row = tk.Frame(connect_frame)
         btn_row.pack(fill=tk.X, pady=5)
@@ -341,6 +352,7 @@ class ADCGUI(tk.Tk):
         self.ADC_max_step_var              = _row("Max Step (pulses):",                "500")
         self.ADC_pulses_per_unit_var       = _row("Piezo Calibration (pulses/angle):", str(int(round(1000 / 2.74, 0))))
         self.ADC_convergence_threshold_var = _row("Convergence Threshold:",            "0.01")
+        self.ADC_settle_time_var           = _row("Settle Time (s):",                  "0.2")
 
     def _setup_logging_tab(self, parent):
         logging_frame = tk.LabelFrame(parent, text="Data Logging", padx=10, pady=10)
@@ -388,6 +400,14 @@ class ADCGUI(tk.Tk):
     def _refresh_ac_ports(self):
         ports = [str(p) for p in serial.tools.list_ports.comports()]
         self.port_select["values"] = ports
+
+    def _refresh_pamc104_ports(self):
+        """PAMC-104 用シリアルポート一覧を更新する。"""
+        ports = [p.device for p in serial.tools.list_ports.comports()]
+        if hasattr(self, "pamc104_port_select"):
+            self.pamc104_port_select["values"] = ports
+            if ports and not self.pamc104_port_select.get():
+                self.pamc104_port_select.set(ports[0])
 
     def _open_port(self, device, com: str) -> bool:
         device.close()
@@ -439,21 +459,33 @@ class ADCGUI(tk.Tk):
 
     def _connect_pamc(self):
         lbl = self._mode.label
-        try:
-            address = int(self.pamc_address_var.get())
-        except ValueError:
-            messagebox.showerror("Error", f"Invalid {lbl} address.")
-            return
-        if self._mode is PiezoMode.PAMC104_204:
-            self.pamc = PAMC104_204(address=address, dll_path=self._dll_path)
+        if self._mode is PiezoMode.PAMC104:
+            # PAMC-104: シリアルポート指定で接続
+            port = self.pamc104_port_select.get().strip() if hasattr(self, "pamc104_port_select") else ""
+            if not port:
+                messagebox.showerror("Error", "Please select a serial port for PAMC-104.")
+                return
+            self.pamc = PAMC104(port=port)
+            ok = self.pamc.connect(port=port)
+            if ok:
+                self.pamc_status_label.config(text=f"Status: Connected ({port})", fg="green")
+            else:
+                self.pamc_status_label.config(text="Status: Connection failed", fg="red")
+                messagebox.showerror("Error", f"PAMC-104 not found on {port}.")
         else:
+            # PAMC-204: アドレス指定で DLL 経由接続
+            try:
+                address = int(self.pamc_address_var.get())
+            except ValueError:
+                messagebox.showerror("Error", f"Invalid {lbl} address.")
+                return
             self.pamc = PAMC204(address=address, dll_path=self._dll_path)
-        ok = self.pamc.connect()
-        if ok:
-            self.pamc_status_label.config(text=f"Status: Connected (addr={address})", fg="green")
-        else:
-            self.pamc_status_label.config(text="Status: Connection failed", fg="red")
-            messagebox.showerror("Error", f"{lbl} not found at address {address}.")
+            ok = self.pamc.connect()
+            if ok:
+                self.pamc_status_label.config(text=f"Status: Connected (addr={address})", fg="green")
+            else:
+                self.pamc_status_label.config(text="Status: Connection failed", fg="red")
+                messagebox.showerror("Error", f"{lbl} not found at address {address}.")
 
     def _disconnect_pamc(self):
         self.pamc.disconnect()
@@ -642,10 +674,13 @@ class ADCGUI(tk.Tk):
             max_step              = int(self.ADC_max_step_var.get())
             pulses_per_unit       = float(self.ADC_pulses_per_unit_var.get())
             convergence_threshold = float(self.ADC_convergence_threshold_var.get())
+            settle_time           = float(self.ADC_settle_time_var.get())
             if pulses_per_unit <= 0:
                 raise ValueError("Piezo calibration factor must be positive")
             if convergence_threshold < 0:
                 raise ValueError("Convergence threshold must be non-negative")
+            if settle_time < 0:
+                raise ValueError("Settle time must be non-negative")
         except ValueError as e:
             messagebox.showerror("Error", f"Invalid ADC parameters: {e}")
             return
@@ -662,6 +697,7 @@ class ADCGUI(tk.Tk):
             self.ADC_worker.max_step_pulses       = max_step
             self.ADC_worker.pulses_per_unit       = pulses_per_unit
             self.ADC_worker.convergence_threshold = convergence_threshold
+            self.ADC_worker.settle_time           = settle_time
             self.ADC_active = True
             self.ADC_worker.start()
 

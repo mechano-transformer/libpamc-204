@@ -3,10 +3,9 @@
 Autocollimator & Piezo Motor Alignment Demo を起動する。
 
 使い方（demo/ フォルダ内から実行）:
-    python main.py                                    # PAMC-204 DLL モード（デフォルト）
-    python main.py --dll ./pamc204.dll                # DLL パスを明示指定
-    python main.py --mode pamc104_204                 # PAMC-104/204 send_command モード
-    python main.py --mode pamc104_204 --dll ./pamc204.dll
+    python main.py                        # PAMC-204 DLL モード（デフォルト）
+    python main.py --dll ./pamc204.dll    # DLL パスを明示指定
+    python main.py --mode pamc104         # PAMC-104 RS232C 直接通信モード
 """
 import sys
 import os
