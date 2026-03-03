@@ -54,14 +54,19 @@ class ADCGUI(tk.Tk):
         dll_path: pamc204.dll のパスを明示指定する場合に渡す。
                   None の場合は自動検索（build/Release/pamc204.dll など）。
         mode:     ピエゾモーター制御モード（文字列または PiezoMode）。
-                  "pamc204"     … PAMC-204 DLL 経由（デフォルト）
-                  "pamc104_204" … PAMC-104/204 send_command 経由
+                  "pamc204" … PAMC-204 DLL 経由（デフォルト）
+                  "pamc104" … PAMC-104 RS232C 直接通信
+        port:     PAMC-104 のシリアルポート名（例: "COM3", "/dev/ttyUSB0"）。
+                  --mode pamc104 のときのみ有効。指定時は GUI の初期値に設定される。
+                  None の場合は GUI で選択。
     """
 
-    def __init__(self, dll_path: str | None = None, mode: str | PiezoMode = "pamc204"):
+    def __init__(self, dll_path: str | None = None, mode: str | PiezoMode = "pamc204",
+                 port: str | None = None):
         super().__init__()
         self._dll_path = dll_path
         self._mode: PiezoMode = PiezoMode.from_str(str(mode)) if not isinstance(mode, PiezoMode) else mode
+        self._initial_port: str | None = port  # --port 引数で指定されたポート
 
         # ── オートコリメータ ──────────────────────────────────────
         self.AC = serial.Serial(baudrate=38400, timeout=0.1, write_timeout=0.1)
@@ -84,7 +89,7 @@ class ADCGUI(tk.Tk):
 
         # ── ピエゾモーターコントローラー（モードで切り替え）────────
         if self._mode is PiezoMode.PAMC104:
-            self.pamc = PAMC104()
+            self.pamc = PAMC104(port=self._initial_port)
         else:
             self.pamc = PAMC204(address=1, dll_path=self._dll_path)
 
@@ -136,6 +141,10 @@ class ADCGUI(tk.Tk):
         self._setup_logging_tab(logging_container)
 
         self.protocol("WM_DELETE_WINDOW", self.safe_destroy)
+
+        # --port 指定時は GUI 表示後に自動接続
+        if self._initial_port and self._mode is PiezoMode.PAMC104:
+            self.after(200, self._auto_connect_pamc104)
 
     # ================================================================
     # セットアップ
@@ -402,12 +411,20 @@ class ADCGUI(tk.Tk):
         self.port_select["values"] = ports
 
     def _refresh_pamc104_ports(self):
-        """PAMC-104 用シリアルポート一覧を更新する。"""
+        """PAMC-104 用シリアルポート一覧を更新する。
+
+        --port 引数で指定されたポートがあればそれを優先して初期値に設定する。
+        """
         ports = [p.device for p in serial.tools.list_ports.comports()]
         if hasattr(self, "pamc104_port_select"):
             self.pamc104_port_select["values"] = ports
-            if ports and not self.pamc104_port_select.get():
-                self.pamc104_port_select.set(ports[0])
+            current = self.pamc104_port_select.get()
+            if not current:
+                # --port 引数で指定されたポートを優先、なければ先頭ポート
+                if self._initial_port:
+                    self.pamc104_port_select.set(self._initial_port)
+                elif ports:
+                    self.pamc104_port_select.set(ports[0])
 
     def _open_port(self, device, com: str) -> bool:
         device.close()
@@ -454,19 +471,41 @@ class ADCGUI(tk.Tk):
             print(f"Error setting units: {e}")
 
     # ================================================================
-    # PAMC-204 接続
+    # PAMC 接続
     # ================================================================
+
+    def _auto_connect_pamc104(self):
+        """--port 引数で指定されたポートに自動接続する（GUI 表示後に呼ばれる）。
+
+        PAMC-204 の connect() と同様に、self.pamc.connect() を呼ぶだけで接続する。
+        self.pamc は __init__() で既に PAMC104(port=self._initial_port) として生成済み。
+        """
+        if not self._initial_port:
+            return
+        print(f"[PAMC104] Auto-connecting to {self._initial_port} ...")
+        ok = self.pamc.connect()
+        if ok:
+            self.pamc_status_label.config(
+                text=f"Status: Connected ({self._initial_port})", fg="green"
+            )
+            if hasattr(self, "pamc104_port_select"):
+                self.pamc104_port_select.set(self._initial_port)
+            print(f"[PAMC104] Auto-connected to {self._initial_port}")
+        else:
+            self.pamc_status_label.config(text="Status: Connection failed", fg="red")
+            print(f"[PAMC104] Auto-connect failed on {self._initial_port}")
 
     def _connect_pamc(self):
         lbl = self._mode.label
         if self._mode is PiezoMode.PAMC104:
-            # PAMC-104: シリアルポート指定で接続
+            # PAMC-104: GUI で選択されたポートを set_port() で設定してから connect()
+            # PAMC-204 と同様に self.pamc.connect() を呼ぶだけ
             port = self.pamc104_port_select.get().strip() if hasattr(self, "pamc104_port_select") else ""
             if not port:
                 messagebox.showerror("Error", "Please select a serial port for PAMC-104.")
                 return
-            self.pamc = PAMC104(port=port)
-            ok = self.pamc.connect(port=port)
+            self.pamc.set_port(port)
+            ok = self.pamc.connect()
             if ok:
                 self.pamc_status_label.config(text=f"Status: Connected ({port})", fg="green")
             else:

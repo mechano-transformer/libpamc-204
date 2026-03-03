@@ -84,6 +84,9 @@ python main.py --dll ./pamc204.dll  --mode pamc204
 
 # PAMC-104 RS232C 直接通信モードで起動する場合
 python main.py --mode pamc104
+
+# PAMC-104 + COMポートを引数で指定する場合（GUI での選択を省略できる）
+python main.py --mode pamc104 --port COM3
 ```
 
 ### モード一覧
@@ -91,7 +94,15 @@ python main.py --mode pamc104
 | `--mode` | 対応コントローラー | 使用ラッパー | 接続方式 |
 | --- | --- | --- | --- |
 | `pamc204`（デフォルト） | PAMC-204 | `pamc204_wrapper.py` | DLL の高レベル API を使用 |
-| `pamc104` | PAMC-104 | `pamc104_wrapper.py` | RS232C 直接通信（115200bps）。GUI でシリアルポートを選択して接続 |
+| `pamc104` | PAMC-104 | `pamc104_wrapper.py` | RS232C 直接通信（115200bps）。`--port COM3` でポートを指定するか、GUI で選択して接続 |
+
+### オプション一覧
+
+| オプション | 説明 | 例 |
+| --- | --- | --- |
+| `--mode` | ピエゾモーター制御モード（`pamc204` / `pamc104`） | `--mode pamc104` |
+| `--dll` | pamc204.dll のパスを明示指定（`pamc204` モードのみ） | `--dll ./pamc204.dll` |
+| `--port` | PAMC-104 のシリアルポートを指定（`pamc104` モードのみ）。省略時は GUI で選択 | `--port COM3` |
 
 ---
 
