@@ -2,20 +2,55 @@
 ADC 制御スレッド（自動ドリフト補正）
 PAMC-204 を使って X/Y 軸を順次駆動し、オートコリメータの誤差をゼロに近づける。
 
-PAMC-204 は同時2軸駆動非対応のため、X軸 → Y軸 の順に順次駆動する。
+PAMC-204 DLL は同時2軸駆動 API を持たないため、X軸 → Y軸 の順に順次駆動する。
+X・Y 両軸の誤差はステップ開始時に一度だけ計算し、X 駆動後に再計算しない。
 コマンド例:
   E011PR100  … アドレス01, 軸1, 相対+100パルス  (move_relative(1, 1, 100))
   E012PR-50  … アドレス01, 軸2, 相対-50パルス   (move_relative(1, 2, -50))
+
+--- デバイス・実験系に合わせて調整するパラメータ ---
+  ADC_LEARNING_RATE    : 補正ゲイン（0〜1）。大きいほど積極的に補正するが振動しやすい
+  ADC_MIN_STEP_PULSES  : 最小補正パルス数。小さすぎると補正が細かすぎて収束しない
+  ADC_MAX_STEP_PULSES  : 最大補正パルス数。大きすぎるとオーバーシュートする
+  ADC_PULSES_PER_UNIT  : キャリブレーション値（1単位角度あたりのパルス数）
+  ADC_CONVERGENCE_THR  : 収束判定閾値。この誤差以下では補正しない
+  ADC_SAMPLE_PERIOD    : 制御ループ周期（秒）
 """
 import threading
 import time
 import numpy as np
 
+# ---------------------------------------------------------------------------
+# デバイス・実験系に合わせて調整するパラメータ
+# ---------------------------------------------------------------------------
+
+# 補正ゲイン（0〜1）。大きいほど積極的に補正するが振動しやすい。
+# 適応学習率: 実効ゲイン = ADC_LEARNING_RATE * clamp(|error| / 0.1, 0.1, 1.0)
+ADC_LEARNING_RATE: float = 0.3
+
+# 最小補正パルス数。計算値がこれより小さい場合はこの値に切り上げる。
+ADC_MIN_STEP_PULSES: int = 1
+
+# 最大補正パルス数（1ステップの上限）。大きすぎるとオーバーシュートする。
+ADC_MAX_STEP_PULSES: int = 500
+
+# キャリブレーション: 1000パルス = 2.74単位角度 → ~365 pulses/unit
+# デバイスや取り付け条件が変わった場合はここを変更する。
+ADC_PULSES_PER_UNIT: float = round(1000 / 2.74, 2)  # ~365
+
+# 収束判定閾値（単位角度）。誤差がこの値以下なら補正しない。
+ADC_CONVERGENCE_THR: float = 0.01
+
+# 制御ループ周期（秒）。短くすると応答が速くなるが CPU 負荷が増える。
+ADC_SAMPLE_PERIOD: float = 0.5
+
+# ---------------------------------------------------------------------------
+
 
 class ADCControlThread(threading.Thread):
     """PAMC-204 を使った自動ドリフト補正スレッド。"""
 
-    def __init__(self, master, sample_period: float = 0.5):
+    def __init__(self, master, sample_period: float = ADC_SAMPLE_PERIOD):
         super().__init__()
         self.daemon = True
         self.master = master
@@ -23,18 +58,15 @@ class ADCControlThread(threading.Thread):
         self.running = False
         self.paused = False
 
-        # キャリブレーション: 1000パルス = 2.74単位角度
-        self.pulses_per_unit: float = round(1000 / 2.74, 2)  # ~365 pulses/unit
+        # キャリブレーション
+        self.pulses_per_unit: float = ADC_PULSES_PER_UNIT
 
-        # 制御パラメータ
-        self.learning_rate_x: float = 0.3
-        self.learning_rate_y: float = 0.3
-        self.min_step_pulses: int = 1
-        self.max_step_pulses: int = 500
-        self.convergence_threshold: float = 0.01
-        # X軸移動後にオートコリメータの値が安定するまで待つ時間（秒）
-        # モーターの振動が収まり、オートコリメータの読み取り値が安定するまでの時間
-        self.settle_time: float = 0.2
+        # 制御パラメータ（モジュール定数から初期化。GUI から上書き可能）
+        self.learning_rate_x: float = ADC_LEARNING_RATE
+        self.learning_rate_y: float = ADC_LEARNING_RATE
+        self.min_step_pulses: int = ADC_MIN_STEP_PULSES
+        self.max_step_pulses: int = ADC_MAX_STEP_PULSES
+        self.convergence_threshold: float = ADC_CONVERGENCE_THR
 
         self.prev_error_x: float = 0.0
         self.prev_error_y: float = 0.0
@@ -64,7 +96,11 @@ class ADCControlThread(threading.Thread):
         print("ADC control thread stopped")
 
     def _calc_pulses(self, error: float, learning_rate: float) -> int:
-        """誤差からパルス数を計算する（適応ステップサイズ付き）。"""
+        """誤差からパルス数を計算する（適応学習率）。
+
+        誤差が大きいほど学習率を大きく、小さいほど小さくする。
+        adaptive_lr = learning_rate * clamp(|error| / 0.1, 0.1, 1.0)
+        """
         adaptive_lr = learning_rate * min(1.0, max(0.1, abs(error) / 0.1))
         return -int(round(adaptive_lr * error * self.pulses_per_unit))
 
@@ -94,9 +130,9 @@ class ADCControlThread(threading.Thread):
     def _control_step(self, iteration: int) -> None:
         """1ステップの ADC 制御を実行する（勾配降下法）。
 
-        修正点:
-          - X軸移動後にオートコリメータの安定を待ってからY軸の誤差を再計算する
-          - 収束閾値内に入ったら補正しない（オーバーシュート防止）
+        X・Y 両軸の誤差をステップ開始時に一度だけ計算し、
+        X軸 → Y軸 の順に順次駆動する（settle_time なし）。
+        収束閾値内に入ったら補正しない（オーバーシュート防止）。
         """
         pamc = self.master.pamc
         if not pamc.is_connected:
@@ -109,7 +145,7 @@ class ADCControlThread(threading.Thread):
         else:
             axis_x, axis_y = 2, 1
 
-        # ── X 軸補正 ──────────────────────────────────────────────────────────
+        # ── X・Y 両軸の誤差を同時に計算 ──────────────────────────────────────
         error_x, error_y = self._read_errors()
         self.master.ADC_error_x = error_x
         self.master.ADC_error_y = error_y
@@ -118,45 +154,36 @@ class ADCControlThread(threading.Thread):
         pulses_x = self._apply_reverse(pulses_x, axis_x)
         pulses_x = self._clamp_pulses(error_x, pulses_x)
 
-        if pulses_x != 0:
-            print(f"ADC Step {iteration}: X error={error_x:.4f}, sending {pulses_x:+d} pulses to ch{axis_x}")
-            finished = self._move_axis(axis_x, pulses_x)
-            if finished:
-                self.master.ADC_total_pulses_x += pulses_x
-                # X軸移動後、オートコリメータの値が安定するまで待つ
-                time.sleep(self.settle_time)
-            else:
-                # タイムアウト or 失敗 → このステップを中断
-                print(f"ADC Step {iteration}: X move failed/timeout, skipping Y correction")
-                return
-        else:
-            print(f"ADC Step {iteration}: X error={error_x:.4f}, no X correction needed")
-
-        # ── Y 軸補正（X軸移動後に誤差を再計算）────────────────────────────────
-        _, error_y = self._read_errors()
-        self.master.ADC_error_y = error_y
-
         pulses_y = self._calc_pulses(error_y, self.learning_rate_y)
         pulses_y = self._apply_reverse(pulses_y, axis_y)
         pulses_y = self._clamp_pulses(error_y, pulses_y)
 
-        if pulses_y != 0:
-            print(f"ADC Step {iteration}: Y error={error_y:.4f}, sending {pulses_y:+d} pulses to ch{axis_y}")
-            finished = self._move_axis(axis_y, pulses_y)
-            if finished:
-                self.master.ADC_total_pulses_y += pulses_y
-                # Y軸移動後も安定待ち
-                time.sleep(self.settle_time)
-            else:
-                print(f"ADC Step {iteration}: Y move failed/timeout")
-                return
+        if pulses_x == 0 and pulses_y == 0:
+            print(f"ADC Step {iteration}: X error={error_x:.4f}, Y error={error_y:.4f}, no correction needed")
         else:
-            print(f"ADC Step {iteration}: Y error={error_y:.4f}, no Y correction needed")
+            # ── X 軸補正 ──────────────────────────────────────────────────────
+            if pulses_x != 0:
+                print(f"ADC Step {iteration}: X error={error_x:.4f}, sending {pulses_x:+d} pulses to ch{axis_x}")
+                finished = self._move_axis(axis_x, pulses_x)
+                if finished:
+                    self.master.ADC_total_pulses_x += pulses_x
+                else:
+                    print(f"ADC Step {iteration}: X move failed/timeout, skipping Y correction")
+                    return
+            else:
+                print(f"ADC Step {iteration}: X error={error_x:.4f}, no X correction needed")
 
-        # 最終誤差を再読み取りして表示更新
-        error_x, error_y = self._read_errors()
-        self.master.ADC_error_x = error_x
-        self.master.ADC_error_y = error_y
+            # ── Y 軸補正（X と同じステップで計算済みの誤差を使用）────────────
+            if pulses_y != 0:
+                print(f"ADC Step {iteration}: Y error={error_y:.4f}, sending {pulses_y:+d} pulses to ch{axis_y}")
+                finished = self._move_axis(axis_y, pulses_y)
+                if finished:
+                    self.master.ADC_total_pulses_y += pulses_y
+                else:
+                    print(f"ADC Step {iteration}: Y move failed/timeout")
+                    return
+            else:
+                print(f"ADC Step {iteration}: Y error={error_y:.4f}, no Y correction needed")
 
         self.prev_error_x = error_x
         self.prev_error_y = error_y
