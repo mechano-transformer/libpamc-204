@@ -47,7 +47,7 @@ _BAUD_RATE   = 115200
 _TIMEOUT_SEC = 2.0
 
 
-class PAMC104_204:
+class PAMC104:
     """PAMC-104 シリアル通信ラッパークラス。
 
     RS232C 経由で直接コマンドを送信する（DLL 不使用）。
