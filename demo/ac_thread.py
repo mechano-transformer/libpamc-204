@@ -66,7 +66,7 @@ class AcThread(threading.Thread):
                 except:
                     pass
 
-                self.master.update_display()
+                self.master.after(0, self.master.update_display)
 
                 # データロギング
                 if self.master.test_running:

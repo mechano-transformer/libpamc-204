@@ -279,12 +279,22 @@ class PAMC204:
             channel:       待機対象チャンネル番号（1-4）
             poll_interval: ポーリング間隔（秒）
             timeout:       タイムアウト（秒）。超過時は警告を出して返る。
+
+        Notes:
+            query_motion_status が None を返す（DLL 失敗）場合は、
+            移動コマンドは送信済みとみなし True を返す。
+            これにより DLL の status 問い合わせが使えない環境でも
+            timeout 遅延なしに動作を継続できる。
         """
         if not self.is_connected:
             return True
         deadline = time.time() + timeout
         while time.time() < deadline:
             status = self.query_motion_status(channel)
+            if status is None:
+                # DLL の status 問い合わせが失敗 → 移動済みとみなして続行
+                print(f"[PAMC204] wait_for_stop: query_motion_status returned None for ch{channel}, assuming stopped")
+                return True
             if status == 1:
                 return True  # 停止確認
             time.sleep(poll_interval)

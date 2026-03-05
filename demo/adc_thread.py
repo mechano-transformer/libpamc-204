@@ -169,6 +169,7 @@ class ADCControlThread(threading.Thread):
                     self.master.ADC_total_pulses_x += pulses_x
                 else:
                     print(f"ADC Step {iteration}: X move failed/timeout, skipping Y correction")
+                    self.master.after(0, self.master.update_ADC_display)
                     return
             else:
                 print(f"ADC Step {iteration}: X error={error_x:.4f}, no X correction needed")
@@ -181,6 +182,7 @@ class ADCControlThread(threading.Thread):
                     self.master.ADC_total_pulses_y += pulses_y
                 else:
                     print(f"ADC Step {iteration}: Y move failed/timeout")
+                    self.master.after(0, self.master.update_ADC_display)
                     return
             else:
                 print(f"ADC Step {iteration}: Y error={error_y:.4f}, no Y correction needed")
@@ -190,7 +192,7 @@ class ADCControlThread(threading.Thread):
         self.prev_pulses_x = pulses_x
         self.prev_pulses_y = pulses_y
 
-        self.master.update_ADC_display()
+        self.master.after(0, self.master.update_ADC_display)
 
     def _move_axis(self, channel: int, pulses: int) -> bool:
         """PAMC の指定チャンネルを相対移動させ、完了を待つ。

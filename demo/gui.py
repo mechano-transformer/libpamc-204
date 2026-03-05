@@ -563,8 +563,12 @@ class ADCGUI(tk.Tk):
         ok = self.pamc.move_relative(ch, pulses)
         print(f"[PAMC204] move_relative ch{ch} {pulses:+d}: {'OK' if ok else 'FAIL'}")
         if ok:
-            self.pamc.wait_for_stop(ch)
-            self._click_position()
+            # wait_for_stop を別スレッドで実行し GUI スレッドをブロックしない
+            import threading
+            def _wait_and_update():
+                self.pamc.wait_for_stop(ch)
+                self.after(0, self._click_position)
+            threading.Thread(target=_wait_and_update, daemon=True).start()
 
     def _click_move_abs(self):
         if not self.pamc.is_connected:
@@ -582,8 +586,12 @@ class ADCGUI(tk.Tk):
         ok = self.pamc.move_absolute(ch, pos)
         print(f"[PAMC204] move_absolute ch{ch} pos={pos}: {'OK' if ok else 'FAIL'}")
         if ok:
-            self.pamc.wait_for_stop(ch)
-            self._click_position()
+            # wait_for_stop を別スレッドで実行し GUI スレッドをブロックしない
+            import threading
+            def _wait_and_update():
+                self.pamc.wait_for_stop(ch)
+                self.after(0, self._click_position)
+            threading.Thread(target=_wait_and_update, daemon=True).start()
 
     def _click_stop(self):
         if not self.pamc.is_connected:
