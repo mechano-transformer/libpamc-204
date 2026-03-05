@@ -117,6 +117,11 @@ class ADCGUI(tk.Tk):
         # ── ウィンドウ設定 ────────────────────────────────────────
         self.title(f"Autocollimator & {self._mode.label} Alignment Demo")
         self.geometry("1400x800")
+        # 起動時に最大化
+        try:
+            self.state("zoomed")   # Windows / macOS
+        except tk.TclError:
+            self.attributes("-zoomed", True)  # Linux (X11)
 
         # ── レイアウト ────────────────────────────────────────────
         main_container = tk.Frame(self)
