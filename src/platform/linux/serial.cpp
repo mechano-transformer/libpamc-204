@@ -182,6 +182,18 @@ static std::string detect_port_name(const std::string &vid = "0403",
     return "";
 }
 
+/**
+ * @brief コマンドがレスポンスを期待するクエリコマンドかどうかを判定する
+ * @param command コマンド文字列
+ * @return true: クエリコマンド（レスポンスあり）, false: 設定/動作コマンド（レスポンスなし）
+ * @note PAMC-204では '?' を含むコマンドのみレスポンスを返す。
+ *       VA, PR, PA, AC, DH, NR, RR, DAC, S, AB, ST, MV 等の設定コマンドはレスポンスを返さない。
+ */
+static bool is_query_command(const std::string &command)
+{
+    return command.find('?') != std::string::npos;
+}
+
 // ============================================================================
 // 公開API実装（Linux版）
 // ============================================================================
@@ -235,13 +247,19 @@ std::string send_command(const std::string &command)
     }
 
     // 読み取り
-    std::string resp = read_response(fd);
+    bool query = is_query_command(command);
+    std::string resp = read_response(fd, query ? 2000 : 300, query ? 200 : 100);
     ::close(fd);
 
     if (resp.empty())
     {
-        std::fprintf(stderr, "read timeout or empty response\n");
-        return std::string();
+        if (query)
+        {
+            std::fprintf(stderr, "read timeout or empty response\n");
+            return std::string();
+        }
+        // 設定/動作コマンドはレスポンスなしでも成功とみなす
+        return command;
     }
 
     std::string token = find_error_token(resp);
@@ -324,12 +342,18 @@ std::vector<std::string> send_commands_batch(const std::vector<std::string> &com
         }
 
         // 読み取り
-        std::string resp = read_response(fd);
+        bool query = is_query_command(command);
+        std::string resp = read_response(fd, query ? 2000 : 300, query ? 200 : 100);
         if (resp.empty())
         {
-            std::fprintf(stderr, "read timeout or empty response at command %zu\n", i + 1);
-            ::close(fd);
-            return {};
+            if (query)
+            {
+                std::fprintf(stderr, "read timeout or empty response at command %zu\n", i + 1);
+                ::close(fd);
+                return {};
+            }
+            // 設定/動作コマンドはレスポンスなしでも成功とみなす
+            resp = command;
         }
 
         // エラーチェック（出力のみ、継続）
