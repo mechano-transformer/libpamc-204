@@ -1,6 +1,7 @@
 ﻿#include "pamc204.h"
 #include <climits>
 #include <cstdio>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,28 @@ static std::string send_one(const std::string &cmd)
 }
 
 /**
+ * @brief レスポンスの最後の非空行を返す内部ヘルパー。
+ *
+ * デバイスがコマンドをエコーバックする場合、レスポンスが
+ * "E011TP?\r\n1234\r\n" のように複数行になる。
+ * 実際の応答値は最後の行に含まれるため、最後の非空行を返す。
+ */
+static std::string last_nonempty_line(const std::string &resp)
+{
+    std::string last_line;
+    std::istringstream ss(resp);
+    std::string line;
+    while (std::getline(ss, line))
+    {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        if (!line.empty())
+            last_line = line;
+    }
+    return last_line;
+}
+
+/**
  * @brief レスポンス文字列を int にパースする内部ヘルパー。
  * @param resp レスポンス文字列
  * @param fallback パース失敗時の戻り値（デフォルト: INT_MIN）
@@ -36,9 +59,12 @@ static int parse_int(const std::string &resp, int fallback = INT_MIN)
 {
     if (resp.empty())
         return fallback;
+    const std::string val = last_nonempty_line(resp);
+    if (val.empty())
+        return fallback;
     try
     {
-        return std::stoi(resp);
+        return std::stoi(val);
     }
     catch (...)
     {
@@ -222,8 +248,9 @@ int query_motion_status(int address, int channel)
     const std::string resp = send_one(cmd);
     if (resp.empty())
         return -1;
-    if (resp[0] == '0' || resp[0] == '1')
-        return resp[0] - '0';
+    const std::string val = last_nonempty_line(resp);
+    if (!val.empty() && (val[0] == '0' || val[0] == '1'))
+        return val[0] - '0';
     return -1;
 }
 
@@ -234,7 +261,10 @@ char query_move_direction(int address, int channel)
     const std::string resp = send_one(cmd);
     if (resp.empty())
         return '\0';
-    return resp[0];
+    const std::string val = last_nonempty_line(resp);
+    if (val.empty())
+        return '\0';
+    return val[0];
 }
 
 // ── 4チャンネル同時操作API ──────────────────────────────────────────────────
@@ -286,9 +316,9 @@ std::vector<int> query_motion_status_all_channels(int address)
     statuses.reserve(4);
     for (size_t i = 0; i < responses.size() && i < 4; i++)
     {
-        const std::string &resp = responses[i];
-        if (!resp.empty() && (resp[0] == '0' || resp[0] == '1'))
-            statuses.push_back(resp[0] - '0');
+        const std::string val = last_nonempty_line(responses[i]);
+        if (!val.empty() && (val[0] == '0' || val[0] == '1'))
+            statuses.push_back(val[0] - '0');
         else
             statuses.push_back(-1);
     }
