@@ -203,42 +203,109 @@ int query_acceleration(int address, int channel)
 {
     char cmd[32];
     std::snprintf(cmd, sizeof(cmd), "E%02d%dAC?", address, channel);
-    return parse_int(send_one(cmd), -1);
+
+    std::string resp = send_one(cmd);
+    if (resp.empty())
+        return -1;
+
+    std::string val = last_nonempty_line(resp);
+    if (val.size() <= 3)
+        return -1;
+
+    std::string number_part = val.substr(3);
+
+    return parse_int(number_part, -1);
 }
 
 int query_velocity(int address, int channel)
 {
     char cmd[32];
     std::snprintf(cmd, sizeof(cmd), "E%02d%dVA?", address, channel);
-    return parse_int(send_one(cmd), -1);
+
+    std::string resp = send_one(cmd);
+    if (resp.empty())
+        return -1;
+
+    std::string val = last_nonempty_line(resp);
+    if (val.size() <= 3)
+        return -1;
+
+    std::string number_part = val.substr(3);
+
+    return parse_int(number_part, -1);
 }
 
 int query_home_position(int address, int channel)
 {
     char cmd[32];
     std::snprintf(cmd, sizeof(cmd), "E%02d%dDH?", address, channel);
-    return parse_int(send_one(cmd));
+
+    std::string resp = send_one(cmd);
+    if (resp.empty())
+        return -1;
+
+    std::string val = last_nonempty_line(resp);
+    if (val.size() <= 3)
+        return -1;
+
+    std::string number_part = val.substr(3);
+
+    return parse_int(number_part);
 }
 
 int query_absolute_position(int address, int channel)
 {
     char cmd[32];
     std::snprintf(cmd, sizeof(cmd), "E%02d%dPA?", address, channel);
-    return parse_int(send_one(cmd));
+
+    std::string resp = send_one(cmd);
+    if (resp.empty())
+        return -1;
+
+    std::string val = last_nonempty_line(resp);
+    if (val.size() <= 3)
+        return -1;
+
+    std::string number_part = val.substr(3);
+
+    return parse_int(number_part);
 }
 
 int query_relative_position(int address, int channel)
 {
     char cmd[32];
     std::snprintf(cmd, sizeof(cmd), "E%02d%dPR?", address, channel);
-    return parse_int(send_one(cmd));
+
+    std::string resp = send_one(cmd);
+    if (resp.empty())
+        return -1;
+
+    std::string val = last_nonempty_line(resp);
+    if (val.size() <= 3)
+        return -1;
+
+    std::string number_part = val.substr(3);
+
+    return parse_int(number_part);
 }
 
 int query_actual_position(int address, int channel)
 {
     char cmd[32];
     std::snprintf(cmd, sizeof(cmd), "E%02d%dTP?", address, channel);
-    return parse_int(send_one(cmd));
+
+    std::string resp = send_one(cmd);
+    if (resp.empty())
+        return -1;
+
+    std::string val = last_nonempty_line(resp);
+    if (val.size() <= 3)
+        return -1;
+
+    // Extract everything after the first 3 characters
+    std::string number_part = val.substr(3);
+
+    return parse_int(number_part);
 }
 
 int query_motion_status(int address, int channel)
@@ -248,9 +315,16 @@ int query_motion_status(int address, int channel)
     const std::string resp = send_one(cmd);
     if (resp.empty())
         return -1;
+
     const std::string val = last_nonempty_line(resp);
-    if (!val.empty() && (val[0] == '0' || val[0] == '1'))
-        return val[0] - '0';
+    if (val.empty())
+        return -1;
+
+    char c = val.back(); // last character
+
+    if (c == '0' || c == '1')
+        return c - '0';
+
     return -1;
 }
 
@@ -264,7 +338,7 @@ char query_move_direction(int address, int channel)
     const std::string val = last_nonempty_line(resp);
     if (val.empty())
         return '\0';
-    return val[0];
+    return val.back();
 }
 
 // ── 4チャンネル同時操作API ──────────────────────────────────────────────────
@@ -296,7 +370,16 @@ std::vector<int> query_actual_position_all_channels(int address)
     std::vector<int> positions;
     positions.reserve(4);
     for (size_t i = 0; i < responses.size() && i < 4; i++)
-        positions.push_back(parse_int(responses[i]));
+    {
+        const std::string val = last_nonempty_line(responses[i]);
+        if (val.size() <= 3)
+        {
+            positions.push_back(-1);
+            continue;
+        }
+        std::string number_part = val.substr(3);
+        positions.push_back(parse_int(number_part));
+    }
     return positions;
 }
 
@@ -317,8 +400,14 @@ std::vector<int> query_motion_status_all_channels(int address)
     for (size_t i = 0; i < responses.size() && i < 4; i++)
     {
         const std::string val = last_nonempty_line(responses[i]);
-        if (!val.empty() && (val[0] == '0' || val[0] == '1'))
-            statuses.push_back(val[0] - '0');
+        if (val.empty())
+        {
+            statuses.push_back(-1);
+            continue;
+        }
+        char c = val.back();
+        if (c == '0' || c == '1')
+            statuses.push_back(c - '0');
         else
             statuses.push_back(-1);
     }
